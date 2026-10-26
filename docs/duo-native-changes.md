@@ -8,11 +8,15 @@ Material path when nothing provides it.
 ## What changed
 
 ### 1. Safe areas
-- `ContentView.swift` no longer applies `.ignoresSafeArea(.container)` to the Compose view, so
-  Compose stays inside the safe area. Only the system background fills the screen edges.
-- `IosAppRoot` (`iosMain`) pads and consumes every side of the safe area (`systemBars` and
-  `displayCutout`) around `App()`. This covers the trailing vertical status bar of the Duo even
-  on a screen that reads only the top inset. The keyboard inset stays with Compose.
+- `ContentView.swift` no longer applies `.ignoresSafeArea(.container)` to the Compose view.
+  Compose stays inside the safe area, and only the system background fills the screen edges.
+- Compose on iOS reports the insets of the whole window, wherever its view is
+  (`WindowInsetsManager` reads the window's root view too). `IosAppRoot` (`iosMain`) therefore
+  pads UIKit's `safeAreaInsets` of the Compose view, which counts only the unsafe area that the
+  view overlaps, and consumes the window insets, so no screen below pads them again. The
+  keyboard inset stays with Compose.
+- The Compose view clips to its frame. Compose moves its content up above the keyboard, and that
+  content went under the status bar.
 
 ### 2. iOS theme (`iosMain/.../ui/theme/`)
 - `LocalPlatformStyle` (`commonMain/.../ui/theme/PlatformStyle.kt`) is the shared hook. Only iOS
@@ -30,76 +34,90 @@ Material path when nothing provides it.
   `platformStyled()` colors and `platformTextFieldShape()`. On iOS that gives a rounded
   10 pt field with the system fill and no indicator line. The outlined fields in dialogs and the
   Sendspin section keep the Material component, with iOS colors and radii.
-- No all-caps button: the "EXIT APP" button is hidden on iOS (`showsExitButton = false`),
-  because iOS apps must not quit themselves. Android still shows it.
+- No all-caps buttons: the "EXIT APP" button is hidden on iOS (`showsExitButton = false`),
+  because iOS apps must not quit themselves, and `platformButtonLabel` shows "BROWSE LIBRARY" as
+  "Browse library". Android keeps both as they are.
 - SF Symbols: the shared screens use `ui/compose/common/Icon`, a drop-in for the Material
   `Icon`. On iOS it draws an SF Symbol for each vector in the table in `SfSymbols.kt`: Material,
   the app's custom player icons, Tabler, and FontAwesome (the appearance choice in Settings).
   Every symbol name was checked against the SF Symbols catalogue. An unmapped vector, or one
   drawn through a `painterResource`, still draws its own glyph.
 
-### 3. SwiftUI tab shell
-- `ContentView` is a `TabView` with `.tabViewStyle(.sidebarAdaptable)`. The system lays it out:
-  a sidebar on the wide inner display, a tab bar on a narrow display, and (iOS 27.1 SDK) the
-  vertical bar below the status bar on the folded Duo. The tabs are Home, Library, Search and
-  Settings, with SF Symbols and the localized Compose titles.
-- How Compose is hosted: one Compose view sits above the `TabView`, sized to the content area
-  of the open tab (`ComposeFrameReader`). Compose renders that tab. There is not a separate
-  Compose view per tab, and the view does not move between tabs. Either of those would stop and
-  restart the Compose lifecycle on each tab switch, and the app disconnects from the server when
-  the lifecycle stops.
+### 3. SwiftUI tab shell (`iosApp/iosApp/ContentView.swift`)
+- `ContentView` is a `TabView` with `.tabViewStyle(.sidebarAdaptable)`, laid out by the system.
+  The tabs are Home, Library, Search and Settings, with SF Symbols and the localized Compose
+  titles.
+- One Compose view sits in an overlay above the `TabView`, over the free area of the open tab.
+  Compose renders that tab. There is not a Compose view per tab, and the view does not move
+  between tabs: either would stop and restart the Compose lifecycle on each tab switch, and the
+  app disconnects from the server when the lifecycle stops.
+- The free area comes from UIKit (`TabAreaProbe`): the tab's column inside the window safe area,
+  cut back to the frame of the visible tab bar, whether the bar is vertical, at the bottom or at
+  the top. SwiftUI's safe area of the tab content is not used, because on the unfolded Duo in
+  portrait it reserves a band at the top while the tab bar floats at the bottom.
+- The Compose view is an overlay, so its size never feeds back into the layout that is measured.
+  As a sibling it caused a layout loop on the Duo, and Compose was never drawn.
 - Kotlin keeps the tab state. `MainNavigationRoot` publishes its tabs to `LocalNativeTabShell`
   (`IosTabShell`) and draws no navigation bar or rail of its own while the shell exists. Swift
   reads `KmpHelper.observeTabShell` and sends taps to `KmpHelper.selectShellTab`. Back stacks,
   "back to Home", deep links and the jump to Search from a library list are unchanged. The shell
-  shows tabs only while the main screen is on. The connection and settings screen fills the
-  window.
-- The tab bar is hidden while the full player is expanded.
+  shows tabs only while the main screen is on. The connection and settings screen fills the safe
+  area.
+- While the full player is expanded, the tab bar is hidden and the player fills the safe area.
 - The fold bridge (`FoldStateBridge`) is unchanged and still behind `#if IPHONE_DUO_SDK`. It
-  reports the division in Compose-view coordinates, so it stays correct when the view is beside
-  a sidebar.
+  reports the division in Compose-view coordinates.
 
 ## Verification
 - On Linux: `./gradlew detektAll testAndroidHostTest` passes (962 tests, 0 failures).
-  `:composeApp:compileKotlinIosArm64` and `:composeApp:compileAndroidMain` compile.
-- On the Mac Mini (Xcode 27.1, iOS 27.1 SDK): an unsigned Debug build for a generic iOS device,
-  with `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG IPHONE_DUO_SDK`, succeeds. That covers the
-  Kotlin framework link, the Swift shell, and the Duo-only Swift. No touched file gives a warning.
-- Not run: no simulator or device run. The UI has not been looked at yet.
+  `:composeApp:compileKotlinIosArm64` compiles.
+- On the Mac Mini: an unsigned build for a generic iOS device against the iOS 27.1 SDK, with
+  `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG IPHONE_DUO_SDK`, succeeds. The iPhone 18 Pro
+  simulator runs the app. The Mini's iPhone Duo simulators never finish booting (also a new one),
+  so the Duo was tested on the MacBook Air.
+- On the MacBook Air, iPhone Duo simulator (iOS 27.1), driven with Peekaboo and logged in to the
+  2.10.8 server:
+  - Folded, unfolded in landscape and in portrait, and book (partially open): nothing under the
+    status bar, the vertical status bar or the home indicator, and the Compose content meets the
+    tab bar.
+  - The tab bar: vertical at the trailing edge when folded and in unfolded landscape, a floating
+    bar at the bottom in unfolded portrait. Tab taps switch the Compose tab.
+  - Library on the wide display: the categories beside the open category (two panes).
+  - Expanded player: the tab bar hides and the player fills the safe area. In book pose the
+    player splits at the fold, so the fold state reaches Compose.
+  - Dark mode, the SF Symbols (tabs, top bars, player controls, menus, theme choice), SF Pro, and
+    the sentence-case "Browse library".
+- Bugs found and fixed in that test: the layout loop (blank screen on the Duo), the double
+  safe-area padding (Compose window insets, and insets subtracted twice in the shell), the tab bar
+  hidden under Compose in portrait, and the all-caps "BROWSE LIBRARY".
 
 ## Check on a device (iPhone Duo, iOS 27.1)
-1. Folded, unfolded, book and tabletop: no content under the status bar, the vertical control
-   bar, the home indicator or the camera. The Compose content meets the tab bar or the sidebar
-   with no gap and no overlap.
-2. Unfolded: the tabs show as a sidebar. Folded: as a tab bar, vertical below the status bar.
-   Folding or unfolding resizes the Compose content to the new area.
-3. Tab taps switch tabs. A tap on the open tab returns it to its root (this depends on SwiftUI
-   calling the binding setter for the selected tab). Settings opens the settings screen, and
-   "home" from there brings the tabs back.
-4. Expanded player: the tab bar hides. Check whether the sidebar hides too in the unfolded pose.
-5. Bottom sheets and dialogs (queue, player options, similar artists, lyrics) cover only the
-   content area, not the tab bar or the sidebar, and the tabs stay tappable under them. Phase 4
-   (native sheets) is meant to fix this.
-6. The cold-launch splash during auto-login shows inside the content area with the tabs around
-   it. Check that this looks acceptable.
-7. Light, dark and "follow system", also switched in Settings at runtime: the colors match the
-   system background at the screen edges. Increase Contrast and Bold Text apply.
-8. SF Pro and the type scale look right at the default and at large Dynamic Type sizes.
-9. Press feedback: rows and cards dim on press. Material buttons and icon buttons now give no
-   press feedback, because their ripple is off and they do not use `LocalIndication`.
-10. SF Symbols: the glyph size and weight next to text, the tint of selected and disabled
-    states, and that shuffle and repeat show "on" as a filled circle.
-11. Keyboard: on the connection and login fields, the focused field moves above the keyboard,
-    and the shell does not jump.
-12. Compose gets zero safe-area insets inside the shell. If SwiftUI passes insets to the hosted
-    view, the content gets a double margin at that edge.
-13. CarPlay and Siri still work. The shell does not touch them, but they share the app process.
+1. Unfolded, the system shows a tab bar, not a sidebar (vertical in landscape, at the bottom in
+   portrait), although the size class is regular. Decide whether to force the sidebar.
+2. Keyboard: the simulator used the hardware keyboard, so the clip fix for the on-screen keyboard
+   is not verified. On the connection and login fields, the focused field must move above the
+   keyboard without content going under the status bar.
+3. Tabletop pose: not tested.
+4. A tap on the open tab returns it to its root only if SwiftUI calls the binding setter for the
+   selected tab. Not tested.
+5. Sheets and dialogs (similar artists, lyrics, DSP settings) are Compose: they are not the native
+   Duo sheets. Phase 4 is meant to replace them.
+6. Press feedback: rows and cards dim on press. Material buttons and icon buttons give no press
+   feedback, because their ripple is off and they do not use `LocalIndication`.
+7. Large Dynamic Type sizes, Increase Contrast and Bold Text.
+8. CarPlay and Siri. The shell does not touch them, but they share the app process.
 
 ## Not done in this round
+- Content does not scroll under the glass tab bar: Compose stops at the bar's edge, and on the
+  folded Duo the strip below the content (the home indicator inset) stays empty. Scrolling under
+  the bars needs the bar insets as content padding in each scrolling screen.
+- Remaining Material controls: switches (the DSP switch is hard to see), checkboxes ("Use TLS",
+  "Allow landscape"), and the tab rows (Direct/WebRTC, the authentication methods). The plan's
+  native Settings form replaces most of them.
+- The spiral holes on playlist tiles are drawn in the primary color, so on iOS they are system
+  blue.
 - Native toolbars. Each Compose screen draws its own top bar, with actions, menus, a search
   field and a second row of chips. A native `NavigationStack` toolbar needs a per-screen API to
-  publish the title and the actions to Swift, or a duplicated Compose bar has to be hidden.
-  That fits with phase 3 of the plan (the native Settings form) and later work.
+  publish the title and the actions to Swift.
 - The Search tab does not use `Tab(role: .search)` or `.searchable`. The Compose search screen
   owns the field.
 - The plan's later phases: the native Settings form, native sheets, the glass mini player, and
