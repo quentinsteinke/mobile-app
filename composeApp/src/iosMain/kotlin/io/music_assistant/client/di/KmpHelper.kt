@@ -54,6 +54,8 @@ import io.music_assistant.client.ui.compose.fold.FoldStateSource
 import io.music_assistant.client.ui.compose.fold.HingeStatus
 import io.music_assistant.client.ui.compose.library.reconcileCarTabs
 import io.music_assistant.client.ui.compose.library.visibleCategories
+import io.music_assistant.client.ui.compose.nav.IosTabShell
+import io.music_assistant.client.ui.compose.nav.TabShellState
 import io.music_assistant.client.utils.HasConnectionData
 import io.music_assistant.client.utils.LocalNetworkPermissionGate
 import io.music_assistant.client.utils.LocalNetworkPermissionProber
@@ -244,6 +246,22 @@ object KmpHelper : KoinComponent {
             NSData.create(bytes = pinned.addressOf(0), length = size.toULong())
         }
     }
+
+    // MARK: - Tab shell
+
+    /**
+     * Subscribe to the tabs of the SwiftUI shell (`ContentView.swift`). Fires with the current
+     * value on subscribe and on every change, on the main thread.
+     */
+    fun observeTabShell(onChanged: (TabShellState) -> Unit): Cancellable {
+        val job = mainScope.launch {
+            IosTabShell.state.collect { onChanged(it) }
+        }
+        return Cancellable { job.cancel() }
+    }
+
+    /** A tap on a tab of the SwiftUI shell. */
+    fun selectShellTab(index: Int) = IosTabShell.select(index)
 
     // MARK: - Readiness observation
 

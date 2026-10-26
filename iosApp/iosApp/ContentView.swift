@@ -12,14 +12,106 @@ struct ComposeView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
+/// The app shell: a native `TabView` around one Compose view.
+///
+/// The tabs are SwiftUI, so the system lays them out: a sidebar on a wide display (the inner
+/// display of iPhone Duo), a tab bar on a narrow one, and on the iOS 27.1 SDK the vertical bar
+/// below the status bar of the folded Duo. The content is the existing Compose UI. One Compose
+/// view sits above the tab view, sized to the content area of the open tab, and Compose renders
+/// that tab. Moving one view between tabs, or a Compose view for each tab, would restart the
+/// Compose lifecycle on every tab switch, and the app disconnects from the server when the
+/// lifecycle stops.
+///
+/// Kotlin owns the tab state (`IosTabShell`): the shell shows the tabs while the main screen is
+/// on, and only the Compose view on the settings and connection screen. A tab tap goes back to
+/// Kotlin, which switches the tab, so back stacks and deep links work as before.
+///
+/// Compose stays inside the safe area, so nothing goes under the status bar, the home indicator,
+/// or the vertical status bar of iPhone Duo. Only the background fills the screen edges, in the
+/// system color that the iOS Compose theme also uses.
 struct ContentView: View {
+    @StateObject private var shell = TabShellModel()
+    @State private var composeFrame: CGRect = .zero
+
     var body: some View {
-        // Compose stays inside the safe area, so nothing goes under the status bar, the home
-        // indicator, or the vertical status bar of iPhone Duo. Only the background fills the
-        // screen edges, in the system color that the iOS Compose theme also uses.
-        ComposeView()
-            .ignoresSafeArea(.keyboard) // Compose has own keyboard handler
-            .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        ZStack(alignment: .topLeading) {
+            if let state = shell.state, state.active {
+                TabView(selection: tabSelection(state)) {
+                    ForEach(Array(state.tabs.enumerated()), id: \.offset) { index, tab in
+                        Tab(tab.title, systemImage: tab.symbol, value: index) {
+                            ComposeFrameReader(frame: $composeFrame)
+                                // The expanded player covers the content, as in Compose.
+                                .toolbarVisibility(state.playerExpanded ? .hidden : .automatic, for: .tabBar)
+                        }
+                    }
+                }
+                .tabViewStyle(.sidebarAdaptable)
+            } else {
+                ComposeFrameReader(frame: $composeFrame)
+            }
+
+            ComposeView()
+                .frame(width: composeFrame.width, height: composeFrame.height)
+                .offset(x: composeFrame.minX, y: composeFrame.minY)
+        }
+        // The stack fills the window, so its coordinates are window coordinates, the space
+        // that ComposeFrameReader reports in.
+        .ignoresSafeArea()
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    /// Reads the selected tab from Kotlin and sends taps to Kotlin. A tap on the open tab also
+    /// goes to Kotlin, which returns that tab to its root.
+    private func tabSelection(_ state: TabShellState) -> Binding<Int> {
+        Binding(
+            get: { Int(state.selected) },
+            set: { KmpHelper.shared.selectShellTab(index: Int32($0)) }
+        )
+    }
+}
+
+/// An empty view that reports its safe content area in window coordinates. Inside a tab, that is
+/// the area left by the tab bar or the sidebar. The keyboard is not part of it, because Compose
+/// moves the focused field above the keyboard itself.
+private struct ComposeFrameReader: View {
+    @Binding var frame: CGRect
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        Color.clear
+            .onGeometryChange(for: CGRect.self) { proxy in
+                safeFrame(proxy.frame(in: .global), proxy.safeAreaInsets)
+            } action: { frame = $0 }
+            .ignoresSafeArea(.keyboard)
+    }
+
+    /// The frame without the insets that are still in it, in case the parent ignores the safe area.
+    private func safeFrame(_ frame: CGRect, _ insets: EdgeInsets) -> CGRect {
+        let left = layoutDirection == .leftToRight ? insets.leading : insets.trailing
+        let right = layoutDirection == .leftToRight ? insets.trailing : insets.leading
+        return CGRect(
+            x: frame.minX + left,
+            y: frame.minY + insets.top,
+            width: max(0, frame.width - left - right),
+            height: max(0, frame.height - insets.top - insets.bottom)
+        )
+    }
+}
+
+/// The tab state that Kotlin publishes (`KmpHelper.observeTabShell`), for SwiftUI.
+@MainActor
+private final class TabShellModel: ObservableObject {
+    @Published private(set) var state: TabShellState?
+    private var subscription: ComposeApp.Cancellable?
+
+    init() {
+        subscription = KmpHelper.shared.observeTabShell { [weak self] state in
+            self?.state = state
+        }
+    }
+
+    deinit {
+        subscription?.cancel()
     }
 }
 

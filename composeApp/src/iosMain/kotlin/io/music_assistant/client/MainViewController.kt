@@ -18,6 +18,8 @@ import io.music_assistant.client.di.iosModule
 import io.music_assistant.client.logging.InMemoryLogWriter
 import io.music_assistant.client.ui.compose.App
 import io.music_assistant.client.ui.compose.IosAppRoot
+import io.music_assistant.client.ui.compose.nav.IosTabShell
+import io.music_assistant.client.ui.compose.nav.LocalNativeTabShell
 import io.music_assistant.client.ui.theme.IosPlatformStyle
 import io.music_assistant.client.ui.theme.LocalPlatformStyle
 import kotlinx.cinterop.staticCFunction
@@ -66,7 +68,10 @@ private val kmpBootstrap: Unit by lazy {
 fun MainViewController() = ComposeUIViewController(
     configure = { bootstrapKmp() },
 ) {
-    CompositionLocalProvider(LocalPlatformStyle provides IosPlatformStyle) {
+    CompositionLocalProvider(
+        LocalPlatformStyle provides IosPlatformStyle,
+        LocalNativeTabShell provides IosTabShell,
+    ) {
         IosAppRoot { App() }
     }
 }

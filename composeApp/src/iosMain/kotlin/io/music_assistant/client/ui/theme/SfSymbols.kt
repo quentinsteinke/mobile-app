@@ -135,12 +135,15 @@ private val symbolNames = mapOf(
     "Bookshelf" to "books.vertical",
 )
 
+/** The SF Symbol name for [imageVector], for native chrome that draws the symbol itself. */
+internal fun sfSymbolName(imageVector: ImageVector): String? = symbolNames[imageVector.name]
+
 /** Rendered glyphs by symbol name. Compose draws on the main thread, so a plain map is enough. */
 private val glyphCache = mutableMapOf<String, ImageBitmap?>()
 
 /** The SF Symbol painter for [imageVector], or null when the vector has no symbol. */
 internal fun sfSymbolPainter(imageVector: ImageVector): Painter? =
-    symbolNames[imageVector.name]
+    sfSymbolName(imageVector)
         ?.let { name -> glyphCache.getOrPut(name) { renderSymbol(name) } }
         ?.let(::SfSymbolPainter)
 
