@@ -51,6 +51,28 @@ struct ContentView: View {
         return CGRect(x: area.minX, y: area.minY, width: area.width, height: max(0, mini.minY - area.minY - 6))
     }
 
+    /// The tabs that SwiftUI draws natively. The others show the Compose screen.
+    private static let nativeTabs: Set<String> = ["library"]
+
+    private var showsNativeTab: Bool {
+        guard let state = shell.state, state.active, Int(state.selected) < state.tabs.count else { return false }
+        return Self.nativeTabs.contains(state.tabs[Int(state.selected)].key)
+    }
+
+    /// Room that native screens leave at the bottom for the mini player.
+    private var miniPlayerInset: CGFloat {
+        guard let mini = miniPlayerFrame else { return 0 }
+        return max(0, tabAreaInShell.maxY - mini.minY) + 8
+    }
+
+    @ViewBuilder
+    private func nativeTab(_ key: String) -> some View {
+        switch key {
+        case "library": LibraryView(bottomInset: miniPlayerInset)
+        default: EmptyView()
+        }
+    }
+
     private var showsTabs: Bool {
         (shell.state.map { $0.active && !$0.playerExpanded } ?? false) && !tabArea.isEmpty
     }
@@ -81,7 +103,14 @@ struct ContentView: View {
                 TabView(selection: tabSelection(state)) {
                     ForEach(Array(state.tabs.enumerated()), id: \.offset) { index, tab in
                         Tab(tab.title, systemImage: tab.symbol, value: index) {
-                            TabAreaProbe(area: $tabArea)
+                            Group {
+                                if Self.nativeTabs.contains(tab.key) {
+                                    nativeTab(tab.key)
+                                        .background(TabAreaProbe(area: $tabArea))
+                                } else {
+                                    TabAreaProbe(area: $tabArea)
+                                }
+                            }
                                 // The expanded player covers the content, as in Compose.
                                 .toolbarVisibility(state.playerExpanded ? .hidden : .automatic, for: .tabBar)
                         }
@@ -105,6 +134,9 @@ struct ContentView: View {
                 .frame(width: composeFrame.width, height: composeFrame.height)
                 .clipped()
                 .offset(x: composeFrame.minX, y: composeFrame.minY)
+                // A native tab draws its own content; Compose stays composed underneath.
+                .opacity(showsNativeTab ? 0 : 1)
+                .allowsHitTesting(!showsNativeTab)
         }
         .overlay(alignment: .topLeading) {
             // In its own hosting controller, as a UIKit view like Compose: plain SwiftUI drawn

@@ -125,6 +125,8 @@ data class NavigationItem(
     val onClick: () -> Unit,
     val icon: ImageVector,
     val label: String? = null,
+    /** A stable name of the destination, for native navigation chrome. */
+    val key: String? = null,
 )
 
 fun <T : NavKey> MultiBackStack<T>.createNavigationItem(
@@ -132,6 +134,7 @@ fun <T : NavKey> MultiBackStack<T>.createNavigationItem(
     icon: ImageVector,
     label: String? = null,
     screenState: ScreenState? = null,
+    key: String? = null,
 ): NavigationItem {
     return NavigationItem(
         selected = currentBackStack == backStack,
@@ -144,6 +147,7 @@ fun <T : NavKey> MultiBackStack<T>.createNavigationItem(
         },
         icon = icon,
         label = label,
+        key = key,
     )
 }
 

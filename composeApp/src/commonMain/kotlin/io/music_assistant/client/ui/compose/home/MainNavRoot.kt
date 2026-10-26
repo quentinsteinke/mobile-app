@@ -270,24 +270,28 @@ fun MainNavigationRoot(
             icon = Icons.Default.Home,
             label = stringResource(Res.string.nav_home),
             screenState = homeScreenState.value,
+            key = "home",
         ),
         multiBackStack.createNavigationItem(
             backStack = 1,
             icon = Icons.Default.LibraryMusic,
             label = stringResource(Res.string.nav_library),
             screenState = libraryScreenState.value,
+            key = "library",
         ),
         multiBackStack.createNavigationItem(
             backStack = 2,
             icon = Icons.Default.Search,
             label = stringResource(Res.string.nav_search),
             screenState = searchScreenState.value,
+            key = "search",
         ),
         NavigationItem(
             selected = false,
             onClick = { goToSettings() },
             Icons.Default.Settings,
             label = stringResource(Res.string.nav_settings),
+            key = "settings",
         ),
     )
 

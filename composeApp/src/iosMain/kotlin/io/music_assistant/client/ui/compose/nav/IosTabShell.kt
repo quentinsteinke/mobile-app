@@ -9,8 +9,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** A tab of the SwiftUI shell. [symbol] is the SF Symbol of its icon. */
-data class ShellTab(val title: String, val symbol: String)
+/**
+ * A tab of the SwiftUI shell. [symbol] is the SF Symbol of its icon, and [key] the stable name of
+ * the destination ("home", "library", "search", "settings").
+ */
+data class ShellTab(val key: String, val title: String, val symbol: String)
 
 /**
  * What the SwiftUI shell shows. [active] is true while the main screen is composed, so the shell
@@ -47,7 +50,7 @@ object IosTabShell : NativeTabShell {
             this.tabs = tabs
             mutableState.value = TabShellState(
                 active = true,
-                tabs = tabs.map { ShellTab(it.label.orEmpty(), sfSymbolName(it.icon) ?: FALLBACK_SYMBOL) },
+                tabs = tabs.map { ShellTab(it.key.orEmpty(), it.label.orEmpty(), sfSymbolName(it.icon) ?: FALLBACK_SYMBOL) },
                 selected = tabs.indexOfFirst { it.selected }.coerceAtLeast(0),
                 playerExpanded = playerExpanded,
             )
