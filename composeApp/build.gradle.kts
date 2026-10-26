@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    // Swift interop for the native iOS UI: flows as AsyncSequence, sealed classes as enums.
+    alias(libs.plugins.skie)
 }
 
 composeCompiler {

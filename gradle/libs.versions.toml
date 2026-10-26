@@ -43,6 +43,7 @@ easyqrscan = "0.7.1"
 androidx-compose-ui-test = "1.11.4"
 robolectric = "4.16.1"
 detekt = "1.23.8"
+skie = "0.10.15"
 turbine = "1.2.1"
 # Pre-1.0 crypto primitives library; pinned deliberately. Wraps OS-native
 # crypto (JDK provider on Android, CryptoKit on iOS) behind one commonMain API.
@@ -149,3 +150,4 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+skie = { id = "co.touchlab.skie", version.ref = "skie" }
