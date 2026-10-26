@@ -30,6 +30,9 @@ data class TabShellState(
  * deep links and the "back to Home" behaviour do not change.
  */
 object IosTabShell : NativeTabShell {
+    /** The SwiftUI shell draws the mini player, Now Playing and the queue (`NativePlayer`). */
+    override val drawsPlayer: Boolean = true
+
     private val mutableState = MutableStateFlow(inactive)
     val state: StateFlow<TabShellState> = mutableState.asStateFlow()
 

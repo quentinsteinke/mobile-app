@@ -307,6 +307,8 @@ fun MainNavigationRoot(
             FloatingBarLayout(
                 modifier = Modifier.padding(scaffoldContentPadding),
                 floatingBar = {
+                    // A platform that draws the player natively gets no Compose player.
+                    if (nativeTabShell?.drawsPlayer == true) return@FloatingBarLayout
                     // The bar is bottom-anchored, so shrinking towards its top slides it down
                     // while the content padding follows the animated height.
                     AnimatedVisibility(

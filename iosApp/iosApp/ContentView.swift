@@ -34,6 +34,7 @@ struct ComposeView: UIViewControllerRepresentable {
 /// system color that the iOS Compose theme also uses.
 struct ContentView: View {
     @StateObject private var shell = TabShellModel()
+    @ObservedObject private var player = PlayerModel.shared
     /// The safe area of the window, in window coordinates. The shell stack fills it.
     @State private var safeAreaFrame: CGRect = .zero
     /// The area of the open tab that is free of the tab bar, in window coordinates.
@@ -43,10 +44,36 @@ struct ContentView: View {
     /// open tab, or the whole safe area while no tab bar shows (the settings screen, and the
     /// expanded player, which covers the screen as a full-screen player does).
     private var composeFrame: CGRect {
-        let showsTabs = shell.state.map { $0.active && !$0.playerExpanded } ?? false
-        let frame = showsTabs && !tabArea.isEmpty ? tabArea : safeAreaFrame
-        return frame.offsetBy(dx: -safeAreaFrame.minX, dy: -safeAreaFrame.minY)
+        guard showsTabs else { return safeArea }
+        let area = tabAreaInShell
+        guard let mini = miniPlayerFrame else { return area }
+        // Leave the bottom of the tab area to the native mini player.
+        return CGRect(x: area.minX, y: area.minY, width: area.width, height: max(0, mini.minY - area.minY - 6))
     }
+
+    private var showsTabs: Bool {
+        (shell.state.map { $0.active && !$0.playerExpanded } ?? false) && !tabArea.isEmpty
+    }
+
+    /// The safe area in the coordinates of the shell stack.
+    private var safeArea: CGRect {
+        CGRect(origin: .zero, size: safeAreaFrame.size)
+    }
+
+    private var tabAreaInShell: CGRect {
+        tabArea.offsetBy(dx: -safeAreaFrame.minX, dy: -safeAreaFrame.minY)
+    }
+
+    /// The glass mini player at the bottom of the tab area, in the coordinates of the shell
+    /// stack, while a player is available.
+    private var miniPlayerFrame: CGRect? {
+        guard showsTabs, player.current != nil else { return nil }
+        let area = tabAreaInShell
+        let margin: CGFloat = 10
+        let height: CGFloat = 60
+        return CGRect(x: area.minX + margin, y: area.maxY - height - 8, width: max(0, area.width - 2 * margin), height: height)
+    }
+
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -78,6 +105,18 @@ struct ContentView: View {
                 .frame(width: composeFrame.width, height: composeFrame.height)
                 .clipped()
                 .offset(x: composeFrame.minX, y: composeFrame.minY)
+        }
+        .overlay(alignment: .topLeading) {
+            // In its own hosting controller, as a UIKit view like Compose: plain SwiftUI drawn
+            // above the UIKit tab view does not get the touches, which the tab view takes.
+            if let frame = miniPlayerFrame, let nowPlaying = player.current {
+                HostedView(MiniPlayer(model: player, nowPlaying: nowPlaying))
+                    .frame(width: frame.width, height: frame.height)
+                    .offset(x: frame.minX, y: frame.minY)
+            }
+        }
+        .sheet(isPresented: $player.isNowPlayingPresented) {
+            NowPlayingView(model: player)
         }
         // The stack and the overlay stay inside the safe area: where a view ignores it, SwiftUI
         // hands the window insets to the hosted Compose view, and Compose would pad them a
@@ -180,6 +219,26 @@ private extension CGRect {
         case (false, _, false): result = CGRect(x: minX, y: bar.maxY, width: width, height: max(0, maxY - bar.maxY))
         }
         return result
+    }
+}
+
+/// A SwiftUI view in its own hosting controller, embedded as a UIKit view.
+private struct HostedView<Content: View>: UIViewControllerRepresentable {
+    let content: Content
+
+    init(_ content: Content) {
+        self.content = content
+    }
+
+    func makeUIViewController(context: Context) -> UIHostingController<Content> {
+        let controller = UIHostingController(rootView: content)
+        controller.view.backgroundColor = .clear
+        controller.sizingOptions = []
+        return controller
+    }
+
+    func updateUIViewController(_ controller: UIHostingController<Content>, context: Context) {
+        controller.rootView = content
     }
 }
 

@@ -41,6 +41,11 @@
 		E8RCH0012F1A000000000001 /* RemoteCommandHandlerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8RCH0002F1A000000000002 /* RemoteCommandHandlerStore.swift */; };
 		E8RCH0012F1A000000000003 /* RemoteCommandHandlerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8RCH0002F1A000000000002 /* RemoteCommandHandlerStore.swift */; };
 		E8RCH0012F1A000000000004 /* RemoteCommandHandlerStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8RCH0002F1A000000000005 /* RemoteCommandHandlerStoreTests.swift */; };
+		28ACF132E327D15FBDB0F7DC /* ArtworkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D6976B6D36E254EB5EC9727 /* ArtworkView.swift */; };
+		F23B6E3C9240A9BEA616D9E0 /* PlayerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28BC2DA0DB9C6174A95C3174 /* PlayerModel.swift */; };
+		A4CAAF1B703FE62A1EB20D76 /* MiniPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E610DB8116B6477F71D7CF6 /* MiniPlayer.swift */; };
+		8875F8D7E6F06321105229DC /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A624652418B7062E5528AA /* NowPlayingView.swift */; };
+		A74F8D207F6CD64FCE68EF6C /* QueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D82CFBB9B0CA8B28580AB36A /* QueueView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,6 +78,11 @@
 		E9ART003000000000000001 /* NativeArtworkPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeArtworkPresentationTests.swift; sourceTree = "<group>"; };
 		E8RCH0002F1A000000000002 /* RemoteCommandHandlerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCommandHandlerStore.swift; sourceTree = "<group>"; };
 		E8RCH0002F1A000000000005 /* RemoteCommandHandlerStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCommandHandlerStoreTests.swift; sourceTree = "<group>"; };
+		1D6976B6D36E254EB5EC9727 /* ArtworkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkView.swift; sourceTree = "<group>"; };
+		28BC2DA0DB9C6174A95C3174 /* PlayerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerModel.swift; sourceTree = "<group>"; };
+		4E610DB8116B6477F71D7CF6 /* MiniPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayer.swift; sourceTree = "<group>"; };
+		10A624652418B7062E5528AA /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
+		D82CFBB9B0CA8B28580AB36A /* QueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +170,7 @@
 			children = (
 				058557BA273AAA24004C7B11 /* Assets.xcassets */,
 				7555FF82242A565900829871 /* ContentView.swift */,
+				58D86B2E3E89FCB8ECB14048 /* Native */,
 				7555FF8C242A565B00829871 /* Info.plist */,
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
 				058557D7273AAEEB004C7B11 /* Preview Content */,
@@ -195,6 +206,18 @@
 				C8SI00022F1B000000000001 /* SiriIntentHandler.swift */,
 			);
 			path = CarPlay;
+			sourceTree = "<group>";
+		};
+		58D86B2E3E89FCB8ECB14048 /* Native */ = {
+			isa = PBXGroup;
+			children = (
+				D82CFBB9B0CA8B28580AB36A /* QueueView.swift */,
+				10A624652418B7062E5528AA /* NowPlayingView.swift */,
+				4E610DB8116B6477F71D7CF6 /* MiniPlayer.swift */,
+				28BC2DA0DB9C6174A95C3174 /* PlayerModel.swift */,
+				1D6976B6D36E254EB5EC9727 /* ArtworkView.swift */,
+			);
+			path = Native;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -347,6 +370,11 @@
 			files = (
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				A74F8D207F6CD64FCE68EF6C /* QueueView.swift in Sources */,
+				8875F8D7E6F06321105229DC /* NowPlayingView.swift in Sources */,
+				A4CAAF1B703FE62A1EB20D76 /* MiniPlayer.swift in Sources */,
+				F23B6E3C9240A9BEA616D9E0 /* PlayerModel.swift in Sources */,
+				28ACF132E327D15FBDB0F7DC /* ArtworkView.swift in Sources */,
 				C8FCC1922F17C6A9005E8312 /* NowPlayingCoordinator.swift in Sources */,
 				E9ART001000000000000001 /* NativeArtworkPresentation.swift in iosApp Sources */,
 				D8CP1001F1A000000000001 /* CarPlayNavigationCoordinator.swift in Sources */,

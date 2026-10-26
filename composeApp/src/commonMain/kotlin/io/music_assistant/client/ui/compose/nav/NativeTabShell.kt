@@ -9,6 +9,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * navigation bar or rail of its own. Android provides none.
  */
 interface NativeTabShell {
+    /**
+     * True when the platform also draws the player (mini player, Now Playing and queue) natively.
+     * The main screen then draws no player of its own.
+     */
+    val drawsPlayer: Boolean
+
     /** Shows [tabs] in the native chrome while the calling screen is composed. */
     @Composable
     fun Publish(tabs: List<NavigationItem>, playerExpanded: Boolean)
