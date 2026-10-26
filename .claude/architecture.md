@@ -177,6 +177,10 @@ actual class PlatformFeature {
 - iOS (`IosHttpClientFactory`): Darwin. `handleChallenge` answers a client-certificate challenge with the identity
   in `KeychainClientIdentity`, only while `clientCertificateAlias` is set. The Darwin engine owns its session pool,
   so `KtorServiceClient` makes a new client when the certificate changes.
+- iOS App Transport Security applies to every Darwin request, the `ws://` API socket included, not only to
+  artwork. Plain `http` and `ws` work to private LAN addresses without a key. `Info.plist` exempts the Tailscale
+  ranges (`100.64.0.0/10`, `fd7a:115c:a1e0::/48`, `*.ts.net`). Every other cleartext host fails with
+  `NSURLErrorAppTransportSecurityRequiresSecureConnection` (-1022). Do not add `NSAllowsArbitraryLoads`.
 
 ## Artwork Loading
 
