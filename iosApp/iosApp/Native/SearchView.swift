@@ -67,10 +67,9 @@ struct SearchView: View {
                             }
                         } header: {
                             Text(section.title)
-                                .font(.title3.weight(.bold))
-                                .foregroundStyle(.primary)
                                 .textCase(nil)
                         }
+                        .headerProminence(.increased)
                     }
                 }
                 .listStyle(.plain)

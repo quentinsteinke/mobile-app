@@ -43,6 +43,7 @@ import io.music_assistant.client.data.repository.fetchRecommendationFolders
 import io.music_assistant.client.imageloader.ArtworkRepository
 import io.music_assistant.client.imageloader.ArtworkToken
 import io.music_assistant.client.input.VolumeButtonService
+import io.music_assistant.client.nativeui.IosSettingsHost
 import io.music_assistant.client.settings.CarPlatform
 import io.music_assistant.client.settings.DefaultClickOption
 import io.music_assistant.client.settings.SettingsRepository
@@ -262,6 +263,17 @@ object KmpHelper : KoinComponent {
 
     /** A tap on a tab of the SwiftUI shell. */
     fun selectShellTab(index: Int) = IosTabShell.select(index)
+
+    /** Leaves the top-level settings screen for the tabs (after signing in). */
+    fun settingsGoHome() = IosSettingsHost.goHome()
+
+    /** Subscribe to whether the top-level settings screen is on. Fires the current value first. */
+    fun observeSettingsShowing(onChanged: (Boolean) -> Unit): Cancellable {
+        val job = mainScope.launch {
+            IosSettingsHost.showing.collect { onChanged(it) }
+        }
+        return Cancellable { job.cancel() }
+    }
 
     // MARK: - Readiness observation
 

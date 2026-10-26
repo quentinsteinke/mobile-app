@@ -39,6 +39,10 @@ struct ContentView: View {
     @State private var safeAreaFrame: CGRect = .zero
     /// The area of the open tab that is free of the tab bar, in window coordinates.
     @State private var tabArea: CGRect = .zero
+    /// A tab that only Swift selected (Settings), shown instead of Kotlin's selected tab.
+    @State private var localSelection: Int?
+    /// The Compose settings screen was asked for (More Settings), instead of the native one.
+    @State private var composeSettingsRequested = false
 
     /// Where the Compose view goes, in the coordinates of the shell stack: the free area of the
     /// open tab, or the whole safe area while no tab bar shows (the settings screen, and the
@@ -52,11 +56,35 @@ struct ContentView: View {
     }
 
     /// The tabs that SwiftUI draws natively. The others show the Compose screen.
-    private static let nativeTabs: Set<String> = ["home", "library", "search"]
+    private static let nativeTabs: Set<String> = ["home", "library", "search", "settings"]
+    /// Tabs that only Swift selects: Kotlin's Settings item would leave the tabs for the
+    /// top-level settings screen.
+    private static let localTabs: Set<String> = ["settings"]
+
+    private func selectedIndex(_ state: TabShellState) -> Int {
+        localSelection ?? Int(state.selected)
+    }
 
     private var showsNativeTab: Bool {
-        guard let state = shell.state, state.active, Int(state.selected) < state.tabs.count else { return false }
-        return Self.nativeTabs.contains(state.tabs[Int(state.selected)].key)
+        guard let state = shell.state, state.active else { return false }
+        let index = selectedIndex(state)
+        return index < state.tabs.count && Self.nativeTabs.contains(state.tabs[index].key)
+    }
+
+    /// The native settings screen in place of the Compose one before the tabs (not connected or
+    /// not signed in).
+    private var showsNativeSettings: Bool {
+        !(shell.state?.active ?? false) && shell.settingsShowing && !composeSettingsRequested
+    }
+
+    private var hidesCompose: Bool { showsNativeTab || showsNativeSettings }
+
+    /// Opens the Compose settings screen, through Kotlin's Settings item.
+    private func openComposeSettings() {
+        guard let state = shell.state, let index = state.tabs.firstIndex(where: { $0.key == "settings" }) else { return }
+        composeSettingsRequested = true
+        localSelection = nil
+        KmpHelper.shared.selectShellTab(index: Int32(index))
     }
 
     /// Room that native screens leave at the bottom for the mini player.
@@ -71,6 +99,7 @@ struct ContentView: View {
         case "home": HomeView(bottomInset: miniPlayerInset)
         case "library": LibraryView(bottomInset: miniPlayerInset)
         case "search": SearchView(bottomInset: miniPlayerInset)
+        case "settings": SettingsView(isTopLevel: false, bottomInset: miniPlayerInset, openMoreSettings: openComposeSettings)
         default: EmptyView()
         }
     }
@@ -122,11 +151,17 @@ struct ContentView: View {
                 // The tab bar and the sidebar lay out to the screen edges; the tab contents still
                 // get the safe area.
                 .ignoresSafeArea()
+            } else if showsNativeSettings {
+                SettingsView(isTopLevel: true)
             } else {
                 Color.clear
             }
         }
         .background(ComposeFrameReader(frame: $safeAreaFrame))
+        .onChange(of: shell.state?.active) { _, active in
+            if active == true { composeSettingsRequested = false }
+        }
+        .onChange(of: shell.state?.selected) { _, _ in localSelection = nil }
         // An overlay, so the size of the Compose view never changes the layout that the readers
         // measure. As a sibling in the stack it fed back into the measured area, and on iPhone
         // Duo the two never settled.
@@ -136,9 +171,9 @@ struct ContentView: View {
                 .frame(width: composeFrame.width, height: composeFrame.height)
                 .clipped()
                 .offset(x: composeFrame.minX, y: composeFrame.minY)
-                // A native tab draws its own content; Compose stays composed underneath.
-                .opacity(showsNativeTab ? 0 : 1)
-                .allowsHitTesting(!showsNativeTab)
+                // A native screen draws its own content; Compose stays composed underneath.
+                .opacity(hidesCompose ? 0 : 1)
+                .allowsHitTesting(!hidesCompose)
         }
         .overlay(alignment: .topLeading) {
             // In its own hosting controller, as a UIKit view like Compose: plain SwiftUI drawn
@@ -159,11 +194,19 @@ struct ContentView: View {
     }
 
     /// Reads the selected tab from Kotlin and sends taps to Kotlin. A tap on the open tab also
-    /// goes to Kotlin, which returns that tab to its root.
+    /// goes to Kotlin, which returns that tab to its root. Settings is selected in Swift only.
     private func tabSelection(_ state: TabShellState) -> Binding<Int> {
         Binding(
-            get: { Int(state.selected) },
-            set: { KmpHelper.shared.selectShellTab(index: Int32($0)) }
+            get: { selectedIndex(state) },
+            set: { index in
+                let key = index < state.tabs.count ? state.tabs[index].key : ""
+                if Self.localTabs.contains(key) {
+                    localSelection = index
+                } else {
+                    localSelection = nil
+                    KmpHelper.shared.selectShellTab(index: Int32(index))
+                }
+            }
         )
     }
 }
@@ -280,16 +323,19 @@ private struct HostedView<Content: View>: UIViewControllerRepresentable {
 @MainActor
 private final class TabShellModel: ObservableObject {
     @Published private(set) var state: TabShellState?
-    private var subscription: ComposeApp.Cancellable?
+    /// The top-level settings screen is on (not connected, or not signed in).
+    @Published private(set) var settingsShowing = false
+    private var subscriptions: [ComposeApp.Cancellable] = []
 
     init() {
-        subscription = KmpHelper.shared.observeTabShell { [weak self] state in
-            self?.state = state
-        }
+        subscriptions = [
+            KmpHelper.shared.observeTabShell { [weak self] state in self?.state = state },
+            KmpHelper.shared.observeSettingsShowing { [weak self] showing in self?.settingsShowing = showing.boolValue },
+        ]
     }
 
     deinit {
-        subscription?.cancel()
+        subscriptions.forEach { $0.cancel() }
     }
 }
 
