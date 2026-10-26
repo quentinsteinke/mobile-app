@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SplitButtonDefaults.LeadingButton
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.PlayerDataFixtures
 import io.music_assistant.client.data.model.client.PlayerType
+import io.music_assistant.client.ui.compose.common.Icon
 import io.music_assistant.client.ui.contentColorByLuminance
 import io.music_assistant.sendspin.api.PlayerState
 import musicassistantclient.composeapp.generated.resources.Res

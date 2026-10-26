@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults.LeadingButton
 import androidx.compose.material3.SplitButtonDefaults.TrailingButton
@@ -29,6 +28,7 @@ import io.music_assistant.client.data.model.client.itemKind
 import io.music_assistant.client.data.model.client.items.AppMediaItem
 import io.music_assistant.client.data.model.server.PlayMediaSupport
 import io.music_assistant.client.data.play.PlayMode
+import io.music_assistant.client.ui.compose.common.Icon
 import io.music_assistant.client.ui.compose.common.OverflowMenuButton
 import io.music_assistant.client.ui.compose.common.items.DefaultClickActionsDialog
 import io.music_assistant.client.ui.compose.common.items.ItemAction

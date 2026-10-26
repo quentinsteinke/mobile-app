@@ -37,7 +37,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -73,14 +72,18 @@ import io.music_assistant.client.data.model.server.User
 import io.music_assistant.client.settings.ConnectionHistoryEntry
 import io.music_assistant.client.settings.ConnectionType
 import io.music_assistant.client.ui.compose.auth.AuthenticationPanel
+import io.music_assistant.client.ui.compose.common.Icon
 import io.music_assistant.client.ui.compose.common.UnsupportedInstallCard
 import io.music_assistant.client.ui.compose.common.clearFocusOnScroll
 import io.music_assistant.client.ui.compose.common.toDisplayString
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.TopBarLayout
 import io.music_assistant.client.ui.compose.settings.sections.SendspinSettingsSection
+import io.music_assistant.client.ui.theme.LocalPlatformStyle
 import io.music_assistant.client.ui.theme.ThemeSetting
 import io.music_assistant.client.ui.theme.ThemeViewModel
+import io.music_assistant.client.ui.theme.platformStyled
+import io.music_assistant.client.ui.theme.platformTextFieldShape
 import io.music_assistant.client.utils.AppVersion
 import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.LocalNetworkOnboardingResources
@@ -281,7 +284,7 @@ fun SettingsScreen(goHome: () -> Unit, exitApp: () -> Unit) {
                     }
                 }
 
-                if (!isAuthenticated) {
+                if (!isAuthenticated && LocalPlatformStyle.current?.showsExitButton != false) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
@@ -780,10 +783,11 @@ private fun DirectConnectionContent(
         keyboardActions = KeyboardActions(
             onNext = { focusManager.moveFocus(FocusDirection.Down) },
         ),
+        shape = platformTextFieldShape(),
         colors = TextFieldDefaults.colors(
             focusedTextColor = MaterialTheme.colorScheme.onBackground,
             unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-        ),
+        ).platformStyled(),
     )
 
     // Base path input — for a reverse proxy that serves the server under a sub-path.
@@ -802,10 +806,11 @@ private fun DirectConnectionContent(
         keyboardActions = KeyboardActions(
             onNext = { focusManager.moveFocus(FocusDirection.Down) },
         ),
+        shape = platformTextFieldShape(),
         colors = TextFieldDefaults.colors(
             focusedTextColor = MaterialTheme.colorScheme.onBackground,
             unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-        ),
+        ).platformStyled(),
     )
 
     // Port input
@@ -823,10 +828,11 @@ private fun DirectConnectionContent(
             imeAction = ImeAction.Done,
         ),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        shape = platformTextFieldShape(),
         colors = TextFieldDefaults.colors(
             focusedTextColor = MaterialTheme.colorScheme.onBackground,
             unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-        ),
+        ).platformStyled(),
     )
 
     // TLS toggle
@@ -947,10 +953,11 @@ private fun WebRTCConnectionContent(
                     }
                 },
             ),
+            shape = platformTextFieldShape(),
             colors = TextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                 unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-            ),
+            ).platformStyled(),
             supportingText = {
                 Text(
                     text = stringResource(Res.string.settings_remote_id_hint),

@@ -92,8 +92,12 @@ fun AppTheme(
         else -> lightScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        content = content,
-    )
+    when (val platformStyle = LocalPlatformStyle.current) {
+        null -> MaterialTheme(
+            colorScheme = colorScheme,
+            content = content,
+        )
+
+        else -> platformStyle.Theme(darkTheme, content)
+    }
 }

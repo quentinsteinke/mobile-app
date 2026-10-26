@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,6 +40,9 @@ import co.touchlab.kermit.Logger
 import io.music_assistant.client.auth.AuthState
 import io.music_assistant.client.data.model.server.AuthProvider
 import io.music_assistant.client.data.model.server.User
+import io.music_assistant.client.ui.compose.common.Icon
+import io.music_assistant.client.ui.theme.platformStyled
+import io.music_assistant.client.ui.theme.platformTextFieldShape
 import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.auth_authenticating
 import musicassistantclient.composeapp.generated.resources.auth_authorize_ha
@@ -194,10 +196,11 @@ private fun BuiltinAuthForm(viewModel: AuthenticationViewModel, provider: AuthPr
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) },
             ),
+            shape = platformTextFieldShape(),
             colors = TextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                 unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-            ),
+            ).platformStyled(),
         )
 
         TextField(
@@ -238,10 +241,11 @@ private fun BuiltinAuthForm(viewModel: AuthenticationViewModel, provider: AuthPr
                     }
                 },
             ),
+            shape = platformTextFieldShape(),
             colors = TextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                 unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-            ),
+            ).platformStyled(),
         )
 
         Button(

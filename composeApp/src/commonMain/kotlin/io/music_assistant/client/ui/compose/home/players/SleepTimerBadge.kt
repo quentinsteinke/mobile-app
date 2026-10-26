@@ -6,13 +6,13 @@ package io.music_assistant.client.ui.compose.home.players
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import io.music_assistant.client.ui.compose.common.Icon
 import io.music_assistant.client.utils.currentTimeMillis
 import io.music_assistant.client.utils.formatDuration
 import kotlinx.coroutines.delay

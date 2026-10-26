@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
@@ -47,6 +46,7 @@ import io.music_assistant.client.data.announcement.AnnouncementOptions
 import io.music_assistant.client.data.announcement.AnnouncementRepository
 import io.music_assistant.client.data.announcement.LiveRecording
 import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.ui.compose.common.Icon
 import io.music_assistant.client.utils.formatDuration
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

@@ -1,6 +1,5 @@
 package io.music_assistant.client.ui.compose.common.providers
 
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -10,6 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import io.music_assistant.client.ui.compose.common.Icon
 import io.music_assistant.client.ui.compose.provider.ProviderViewModel
 import musicassistantclient.composeapp.generated.resources.Res
 import musicassistantclient.composeapp.generated.resources.cd_provider_icon
