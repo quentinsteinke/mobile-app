@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -65,6 +66,7 @@ import io.music_assistant.client.data.model.client.MediaType
 import io.music_assistant.client.data.model.client.Player
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.data.model.client.PlayerDataFixtures
+import io.music_assistant.client.data.model.client.PlayerMedia
 import io.music_assistant.client.data.model.client.QualityTier
 import io.music_assistant.client.data.model.client.ResolvedChapter
 import io.music_assistant.client.data.model.client.items.AppMediaItem
@@ -84,6 +86,7 @@ import io.music_assistant.client.ui.compose.common.icons.AlbumIcon
 import io.music_assistant.client.ui.compose.common.icons.TrackIcon
 import io.music_assistant.client.ui.compose.common.items.artistNavigation
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
+import io.music_assistant.client.ui.compose.fold.rememberFoldTracker
 import io.music_assistant.client.ui.fadingEdges
 import io.music_assistant.client.ui.inactive
 import io.music_assistant.client.utils.formatDuration
@@ -326,47 +329,35 @@ fun FullPlayerItem(
     onChooseArtist: () -> Unit = {},
 ) {
     val currentMedia = item.player.currentMedia
-    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
     val controlTint = colors.controlTint
+
+    // Tabletop posture: the artwork, seen from a distance, fills the part above the fold,
+    // and the controls sit below it, where a hand reaches them.
+    val fold = rememberFoldTracker()
+    val tabletop = fold.tabletopSpan(minSide = MIN_TABLETOP_REGION)
 
     // Do not add padding here - title/subtitle should be full width.
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().then(fold.modifier),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = if (tabletop != null) Arrangement.Top else Arrangement.SpaceBetween,
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING)
-                .weight(1f, fill = false)
-                .aspectRatio(1f)
-                .heightIn(max = 500.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.dominant.alphaOn(currentMedia != null)),
-            contentAlignment = Alignment.Center,
-        ) {
-            currentMedia?.imageUrl?.let {
-                val placeholder =
-                    rememberPlaceholderPainter(
-                        backgroundColor = colors.dominant,
-                        iconColor = onPrimaryContainer,
-                        icon = currentMedia.defaultIcon,
-                    )
-                AsyncImage(
-                    placeholder = placeholder,
-                    fallback = placeholder,
-                    error = placeholder,
-                    model = rememberArtworkRequest(it),
-                    contentDescription = currentMedia.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } ?: Icon(
-                imageVector = currentMedia?.defaultIcon ?: AlbumIcon,
-                contentDescription = null,
-                modifier = Modifier.size(120.dp),
-                tint = onPrimaryContainer,
+        val artwork: @Composable (sizing: Modifier) -> Unit = { sizing ->
+            FullPlayerArtwork(
+                modifier = Modifier.padding(horizontal = FULL_PLAYER_HORIZONTAL_PADDING).then(sizing),
+                currentMedia = currentMedia,
+                colors = colors,
             )
         }
+        tabletop?.let { span ->
+            Box(
+                modifier = Modifier.fillMaxWidth().height(span.start),
+                contentAlignment = Alignment.Center,
+            ) {
+                artwork(Modifier.padding(vertical = 8.dp).aspectRatio(1f, matchHeightConstraintsFirst = true))
+            }
+            Spacer(Modifier.height(span.end - span.start))
+        } ?: artwork(Modifier.weight(1f, fill = false).aspectRatio(1f).heightIn(max = 500.dp))
 
         // Track info
         val poweredOff = item.player.isPoweredOff
@@ -815,7 +806,49 @@ fun FullPlayerItem(
     }
 }
 
+@Composable
+private fun FullPlayerArtwork(modifier: Modifier, currentMedia: PlayerMedia?, colors: PlayerColors) {
+    val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(
+        modifier = modifier
+            .testTag(FullPlayerSemantics.ARTWORK_TAG)
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.dominant.alphaOn(currentMedia != null)),
+        contentAlignment = Alignment.Center,
+    ) {
+        currentMedia?.imageUrl?.let {
+            val placeholder =
+                rememberPlaceholderPainter(
+                    backgroundColor = colors.dominant,
+                    iconColor = onPrimaryContainer,
+                    icon = currentMedia.defaultIcon,
+                )
+            AsyncImage(
+                placeholder = placeholder,
+                fallback = placeholder,
+                error = placeholder,
+                model = rememberArtworkRequest(it),
+                contentDescription = currentMedia.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } ?: Icon(
+            imageVector = currentMedia?.defaultIcon ?: AlbumIcon,
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            tint = onPrimaryContainer,
+        )
+    }
+}
+
+object FullPlayerSemantics {
+    const val ARTWORK_TAG = "full_player_artwork"
+}
+
 private val FULL_PLAYER_HORIZONTAL_PADDING = 16.dp
+
+// Each side of a tabletop fold must hold its part of the player, or the player stays flat.
+private val MIN_TABLETOP_REGION = 160.dp
 
 private val previewPoweredOffColors = PlayerColors(dominant = Color.DarkGray, controlTint = Color.White)
 

@@ -37,8 +37,10 @@ import io.music_assistant.client.ui.compose.fold.FoldGutter
 import io.music_assistant.client.ui.compose.fold.FoldStateSource
 import io.music_assistant.client.ui.compose.home.CollapsibleQueueSemantics
 import io.music_assistant.client.ui.compose.home.FloatingBarSemantics
+import io.music_assistant.client.ui.compose.home.players.FullPlayerSemantics
 import io.music_assistant.client.ui.compose.nav.TwoPaneSemantics
 import musicassistantclient.composeapp.generated.resources.Res
+import musicassistantclient.composeapp.generated.resources.action_pause
 import musicassistantclient.composeapp.generated.resources.common_back
 import musicassistantclient.composeapp.generated.resources.media_type_albums
 import musicassistantclient.composeapp.generated.resources.media_type_artists
@@ -61,8 +63,10 @@ class AdaptiveLayoutTest {
     private val serviceClient: FakeServiceClient by inject(ServiceClient::class.java)
     private val foldStateSource: FoldStateSource by inject(FoldStateSource::class.java)
 
-    // A fold of the portrait inner display from top to bottom (book), across its middle.
+    // A fold of the portrait inner display from top to bottom (book), across its middle, and
+    // one from side to side (tabletop) that crosses where the flat player draws its artwork.
     private val bookDivision = DpRect(left = 322.dp, top = 0.dp, right = 347.dp, bottom = 951.dp)
+    private val tabletopDivision = DpRect(left = 0.dp, top = 380.dp, right = 669.dp, bottom = 405.dp)
 
     @Test
     @Config(qualifiers = Qualifiers.MEDIUM_PHONE)
@@ -93,6 +97,8 @@ class AdaptiveLayoutTest {
         home.expandPlaying()
         val queue = composeTestRule.onNodeWithTag(CollapsibleQueueSemantics.QUEUE_TAG).getUnclippedBoundsInRoot()
         assertTrue(queue.left >= root().width / 2, "queue is in the end pane")
+        val artwork = artwork()
+        assertTrue(artwork.width >= 300.dp, "artwork is large: ${artwork.width}")
     }
 
     @Test
@@ -133,6 +139,31 @@ class AdaptiveLayoutTest {
         assertTrue(detail.left >= bookDivision.right + FoldGutter, "the list starts after the fold: ${detail.left}")
     }
 
+    @Test
+    @Config(qualifiers = Qualifiers.FOLDABLE_INNER_PORTRAIT)
+    fun `in book posture the player and the queue split at the fold`() {
+        foldStateSource.reportDivision(bookDivision)
+        launchWithTrack().expandPlaying()
+
+        val queue = composeTestRule.onNodeWithTag(CollapsibleQueueSemantics.QUEUE_TAG).getUnclippedBoundsInRoot()
+        assertTrue(artwork().right <= bookDivision.left, "artwork is before the fold")
+        assertTrue(queue.left >= bookDivision.right + FoldGutter, "queue starts after the fold: ${queue.left}")
+    }
+
+    // The login flow does not fit the 669 dp height of the landscape inner display, so this
+    // folds the portrait window from side to side, as a flip phone folds.
+    @Test
+    @Config(qualifiers = Qualifiers.FOLDABLE_INNER_PORTRAIT)
+    fun `in tabletop posture the artwork is above the fold and the controls below it`() {
+        foldStateSource.reportDivision(tabletopDivision)
+        launchWithTrack().expandPlaying()
+
+        val pause = composeTestRule.onNode(hasContentDescription(Res.string.action_pause.get()))
+            .getUnclippedBoundsInRoot()
+        assertTrue(artwork().bottom <= tabletopDivision.top, "artwork ends above the fold: ${artwork().bottom}")
+        assertTrue(pause.top >= tabletopDivision.bottom, "controls start below the fold: ${pause.top}")
+    }
+
     private val track = ServerMediaItemFixtures.track()
     private val player = ServerPlayerFixtures.player()
 
@@ -153,6 +184,9 @@ class AdaptiveLayoutTest {
     private fun root() = composeTestRule.onRoot().getUnclippedBoundsInRoot()
 
     private fun pane(tag: String) = composeTestRule.onNodeWithTag(tag).getUnclippedBoundsInRoot()
+
+    private fun artwork() = composeTestRule.onNodeWithTag(FullPlayerSemantics.ARTWORK_TAG, useUnmergedTree = true)
+        .getUnclippedBoundsInRoot()
 
     private fun libraryTab() =
         composeTestRule.onNode(isTab(Res.string.nav_library.get())).getUnclippedBoundsInRoot()
