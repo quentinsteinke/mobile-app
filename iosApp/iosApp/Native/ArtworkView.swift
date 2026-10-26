@@ -12,22 +12,25 @@ struct ArtworkView: View {
     @StateObject private var loader = ArtworkLoader()
 
     var body: some View {
-        ZStack {
-            Rectangle().fill(Color(uiColor: .tertiarySystemFill))
-            if let image = loader.image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(systemName: placeholderSymbol)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.secondary)
+        // The image fills an overlay of a color, so it never asks for more than the space it
+        // gets: an aspect-filled image on its own reports the larger, filled size.
+        Rectangle()
+            .fill(Color(uiColor: .tertiarySystemFill))
+            .overlay {
+                if let image = loader.image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else if !placeholderSymbol.isEmpty {
+                    Image(systemName: placeholderSymbol)
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .onAppear { loader.load(url) }
-        .onChange(of: url) { _, newURL in loader.load(newURL) }
-        .onDisappear { loader.cancel() }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .onAppear { loader.load(url) }
+            .onChange(of: url) { _, newURL in loader.load(newURL) }
+            .onDisappear { loader.cancel() }
     }
 }
 
@@ -38,15 +41,19 @@ final class ArtworkLoader: ObservableObject {
     private var url: String?
     private var request: ComposeApp.Cancellable?
 
+    /// Keeps the previous image until the new one arrives, so a track change does not flash
+    /// the placeholder.
     func load(_ newURL: String?) {
         guard newURL != url || image == nil else { return }
         request?.cancel()
         url = newURL
-        image = nil
-        guard let newURL, !newURL.isEmpty else { return }
+        guard let newURL, !newURL.isEmpty else {
+            image = nil
+            return
+        }
         request = NativeArtworkLoader.loadArtwork(urlString: newURL) { [weak self] loaded in
             guard let self, self.url == newURL else { return }
-            self.image = loaded
+            withAnimation(.easeInOut(duration: 0.3)) { self.image = loaded }
         }
     }
 

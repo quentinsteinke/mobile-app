@@ -29,6 +29,7 @@ struct NowPlayingView: View {
             }
         }
         .environment(\.colorScheme, .dark)
+        .tint(.white)
         .presentationDragIndicator(.visible)
         .presentationBackground(.black)
     }
