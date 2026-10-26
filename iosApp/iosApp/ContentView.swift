@@ -14,9 +14,12 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     var body: some View {
+        // Compose stays inside the safe area, so nothing goes under the status bar, the home
+        // indicator, or the vertical status bar of iPhone Duo. Only the background fills the
+        // screen edges, in the system color that the iOS Compose theme also uses.
         ComposeView()
-                .ignoresSafeArea(.keyboard) // Compose has own keyboard handler
-                .ignoresSafeArea(.container) // Extend to screen edges (removes white areas)
+            .ignoresSafeArea(.keyboard) // Compose has own keyboard handler
+            .background(Color(uiColor: .systemBackground).ignoresSafeArea())
     }
 }
 

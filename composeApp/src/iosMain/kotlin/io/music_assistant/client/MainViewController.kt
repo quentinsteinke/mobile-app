@@ -16,6 +16,7 @@ import io.music_assistant.client.di.initKoin
 import io.music_assistant.client.di.iosModule
 import io.music_assistant.client.logging.InMemoryLogWriter
 import io.music_assistant.client.ui.compose.App
+import io.music_assistant.client.ui.compose.IosAppRoot
 import kotlinx.cinterop.staticCFunction
 import platform.Foundation.NSException
 import platform.Foundation.NSFileManager
@@ -61,7 +62,7 @@ private val kmpBootstrap: Unit by lazy {
 ) // iOS factory function intentionally PascalCase; called from Swift as if it were a constructor
 fun MainViewController() = ComposeUIViewController(
     configure = { bootstrapKmp() },
-) { App() }
+) { IosAppRoot { App() } }
 
 private fun cleanupStaleLogFile() {
     NSFileManager.defaultManager.removeItemAtPath(
