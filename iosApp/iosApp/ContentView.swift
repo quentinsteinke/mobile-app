@@ -49,6 +49,9 @@ struct ContentView: View {
                     }
                 }
                 .tabViewStyle(.sidebarAdaptable)
+                // The tab bar and the sidebar lay out to the screen edges; the tab contents still
+                // get the safe area.
+                .ignoresSafeArea()
             } else {
                 ComposeFrameReader(frame: $composeFrame)
             }
@@ -58,15 +61,17 @@ struct ContentView: View {
         // Duo the two never settled.
         .overlay(alignment: .topLeading) {
             ComposeView()
+                .ignoresSafeArea(.keyboard) // Compose has its own keyboard handling
                 .frame(width: composeFrame.width, height: composeFrame.height)
                 .clipped()
                 .offset(x: composeFrame.minX, y: composeFrame.minY)
         }
-        // The stack fills the window. ComposeFrameReader reports in its coordinate space, so the
-        // offset places the Compose view exactly over the reported area.
+        // ComposeFrameReader reports in this coordinate space, so the offset places the Compose
+        // view exactly over the reported area. The stack and the overlay stay inside the safe
+        // area: where a view ignores it, SwiftUI hands the window insets to the hosted Compose
+        // view, and Compose would pad them a second time.
         .coordinateSpace(.named(ComposeFrameReader.space))
-        .ignoresSafeArea()
-        .background(Color(uiColor: .systemBackground))
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
     }
 
     /// Reads the selected tab from Kotlin and sends taps to Kotlin. A tap on the open tab also
