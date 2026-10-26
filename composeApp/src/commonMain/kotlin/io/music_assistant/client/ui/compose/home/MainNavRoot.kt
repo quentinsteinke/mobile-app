@@ -95,6 +95,7 @@ import io.music_assistant.client.ui.compose.library.LibraryScreenState
 import io.music_assistant.client.ui.compose.nav.AdaptiveNavigationBarLayout
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.ConditionalBackNavDisplay
+import io.music_assistant.client.ui.compose.nav.LocalNativeTabShell
 import io.music_assistant.client.ui.compose.nav.MultiBackStack
 import io.music_assistant.client.ui.compose.nav.NavigationItem
 import io.music_assistant.client.ui.compose.nav.ScreenState
@@ -295,9 +296,12 @@ fun MainNavigationRoot(
     val rootScreenEditing = homeScreenState.value?.editMode == true ||
         libraryScreenState.value?.editMode == true
 
+    val nativeTabShell = LocalNativeTabShell.current
+    nativeTabShell?.Publish(navigationItems, playerExpanded)
+
     Box(modifier = Modifier.fillMaxSize()) {
         AdaptiveNavigationBarLayout(
-            showNavigation = !playerExpanded,
+            showNavigation = !playerExpanded && nativeTabShell == null,
             navigationItems = navigationItems,
         ) { scaffoldContentPadding ->
             FloatingBarLayout(
