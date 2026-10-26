@@ -50,6 +50,7 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.Scene
+import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.defaultPopTransitionSpec
 import androidx.navigation3.ui.defaultTransitionSpec
 import androidx.savedstate.serialization.SavedStateConfiguration
@@ -97,6 +98,7 @@ import io.music_assistant.client.ui.compose.nav.ConditionalBackNavDisplay
 import io.music_assistant.client.ui.compose.nav.MultiBackStack
 import io.music_assistant.client.ui.compose.nav.NavigationItem
 import io.music_assistant.client.ui.compose.nav.ScreenState
+import io.music_assistant.client.ui.compose.nav.TwoPaneSceneStrategy
 import io.music_assistant.client.ui.compose.nav.createNavigationItem
 import io.music_assistant.client.ui.compose.provider.ProviderViewModel
 import io.music_assistant.client.ui.compose.search.GlobalSearchRequest
@@ -105,6 +107,7 @@ import io.music_assistant.client.ui.compose.search.SearchScreenState
 import io.music_assistant.client.ui.compose.search.SearchViewModel
 import io.music_assistant.client.utils.DataConnectionState
 import io.music_assistant.client.utils.SessionState
+import io.music_assistant.client.utils.WindowClass
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
@@ -344,6 +347,7 @@ fun MainNavigationRoot(
                 val entryProvider = mainNavEntryProvider(
                     floatingBarContentPadding,
                     multiBackStack,
+                    backStacks[1],
                     homeScreenViewModel,
                     actionsViewModel,
                     viewModeViewModel,
@@ -354,6 +358,10 @@ fun MainNavigationRoot(
                     goToSettings,
                 )
                 val tabRootKeys = backStacks.map { entryProvider(it.first()).contentKey }
+                val isWide = WindowClass.isWide()
+                val sceneStrategies = remember(isWide) {
+                    listOf(TwoPaneSceneStrategy<NavKey>(enabled = isWide), SinglePaneSceneStrategy())
+                }
                 ConditionalBackNavDisplay(
                     modifier = Modifier
                         .fillMaxSize()
@@ -365,6 +373,7 @@ fun MainNavigationRoot(
                         ),
                         entries = multiBackStack.toEntries(entryProvider),
                     ),
+                    sceneStrategies = sceneStrategies,
                     transitionSpec = tabAwareTransitionSpec(tabRootKeys, defaultTransitionSpec()),
                     popTransitionSpec = tabAwareTransitionSpec(tabRootKeys, defaultPopTransitionSpec()),
                     onBack = {
@@ -402,6 +411,7 @@ private fun Scene<NavKey>.tabIndex(tabRootKeys: List<Any>): Int {
 private fun mainNavEntryProvider(
     contentPadding: PaddingValues,
     multiBackStack: MultiBackStack<NavKey>,
+    libraryBackStack: List<NavKey>,
     homeScreenViewModel: HomeScreenViewModel,
     actionsViewModel: ActionsViewModel,
     viewModeViewModel: ViewModeViewModel,
@@ -452,25 +462,38 @@ private fun mainNavEntryProvider(
             )
         }
 
-        entry<MainNav.Library> {
+        // On a wide window the categories stay in the start pane, and the category that is open
+        // above them fills the end pane (see TwoPaneSceneStrategy).
+        entry<MainNav.Library>(metadata = TwoPaneSceneStrategy.listPane()) {
             val libraryCategoriesViewModel = koinViewModel<LibraryCategoriesViewModel>()
             val screenState = rememberPublishedScreenState(libraryScreenState) {
                 LibraryScreenState.create()
             }
+            val openCategory = libraryBackStack.getOrNull(1)?.libraryCategory()
 
             LibraryScreen(
                 libraryCategoriesViewModel,
                 contentPadding = contentPadding,
                 state = screenState,
+                selectedCategory = openCategory,
                 onCategoryClick = { category ->
-                    when (category) {
-                        LibraryCategory.BROWSE ->
-                            multiBackStack.add(MainNav.Browse(path = null, title = null))
+                    // A tap in the start pane replaces the open category, so the stack never
+                    // holds two categories. Tapping the open one goes back to its list.
+                    when {
+                        category == openCategory -> multiBackStack.popAbove(2)
 
-                        LibraryCategory.AI_RADIO -> multiBackStack.add(MainNav.AiRadio)
+                        else -> {
+                            multiBackStack.resetCurrentBackStack()
+                            when (category) {
+                                LibraryCategory.BROWSE ->
+                                    multiBackStack.add(MainNav.Browse(path = null, title = null))
 
-                        else ->
-                            category.mediaType?.let { multiBackStack.add(MainNav.LibraryList(it)) }
+                                LibraryCategory.AI_RADIO -> multiBackStack.add(MainNav.AiRadio)
+
+                                else ->
+                                    category.mediaType?.let { multiBackStack.add(MainNav.LibraryList(it)) }
+                            }
+                        }
                     }
                 },
             )
@@ -684,6 +707,14 @@ private fun <S : ScreenState> rememberPublishedScreenState(
         onDispose { holder.value = null }
     }
     return screenState
+}
+
+/** The category that this Library route opens, or null for a route below a category. */
+private fun NavKey.libraryCategory(): LibraryCategory? = when (this) {
+    is MainNav.LibraryList -> LibraryCategory.entries.firstOrNull { it.mediaType == mediaType }
+    is MainNav.Browse -> LibraryCategory.BROWSE.takeIf { path == null }
+    MainNav.AiRadio -> LibraryCategory.AI_RADIO
+    else -> null
 }
 
 private sealed interface MainNav : NavKey {

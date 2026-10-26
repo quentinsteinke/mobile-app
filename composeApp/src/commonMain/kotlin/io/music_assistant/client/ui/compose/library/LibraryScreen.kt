@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -47,6 +46,8 @@ import compose.icons.TablerIcons
 import compose.icons.tablericons.GripVertical
 import io.music_assistant.client.ui.compose.common.GridButton
 import io.music_assistant.client.ui.compose.common.moveToEnabledBoundary
+import io.music_assistant.client.ui.compose.fold.FoldAwareGridCells
+import io.music_assistant.client.ui.compose.fold.rememberFoldTracker
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.ScreenState
 import io.music_assistant.client.ui.compose.nav.TopBarLayout
@@ -68,6 +69,8 @@ fun LibraryScreen(
     libraryCategoriesViewModel: LibraryCategoriesViewModel,
     contentPadding: PaddingValues,
     state: LibraryScreenState,
+    // The category open beside this screen in a two-pane layout, shown as selected.
+    selectedCategory: LibraryCategory? = null,
     onCategoryClick: (LibraryCategory) -> Unit,
 ) {
     val categoriesState by libraryCategoriesViewModel.state.collectAsStateWithLifecycle()
@@ -127,6 +130,7 @@ fun LibraryScreen(
             editMode = editMode,
             enabledCount = enabledCount,
             reorderableGridState = reorderableGridState,
+            selectedCategory = selectedCategory,
             onToggle = { category, enabled -> items = moveToEnabledBoundary(items, category, enabled) },
             onCategoryClick = onCategoryClick,
         )
@@ -141,15 +145,17 @@ private fun LibraryGrid(
     editMode: Boolean = false,
     enabledCount: Int = categories.size,
     reorderableGridState: ReorderableLazyGridState? = null,
+    selectedCategory: LibraryCategory? = null,
     onToggle: (LibraryCategory, Boolean) -> Unit = { _, _ -> },
     onCategoryClick: (LibraryCategory) -> Unit,
 ) {
     val width = libraryItemMinWidth()
     val tileHeight = width / ITEM_HEIGHT_RATIO
+    val fold = rememberFoldTracker()
     LazyVerticalGrid(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = 16.dp).then(fold.modifier),
         state = gridState,
-        columns = GridCells.Adaptive(minSize = width),
+        columns = FoldAwareGridCells(minSize = width, evenColumns = fold.bookSpan() != null),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = paddingValues,
@@ -163,6 +169,7 @@ private fun LibraryGrid(
                     modifier = modifier,
                     text = stringResource(category.stringResource()),
                     icon = category.icon(),
+                    selected = !editMode && category == selectedCategory,
                     onClick = onClick,
                 )
             }

@@ -35,6 +35,13 @@ class MultiBackStack<T : NavKey>(private val backStacks: List<MutableList<T>>) {
         }
     }
 
+    /** Removes the entries of the current back stack above the first [count]. */
+    fun popAbove(count: Int) {
+        backStacks[currentBackStack].apply {
+            while (size > count.coerceAtLeast(1)) removeAt(lastIndex)
+        }
+    }
+
     fun add(element: T) {
         backStacks[currentBackStack].add(element)
     }

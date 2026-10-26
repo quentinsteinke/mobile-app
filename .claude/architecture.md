@@ -177,6 +177,10 @@ actual class PlatformFeature {
 - iOS (`IosHttpClientFactory`): Darwin. `handleChallenge` answers a client-certificate challenge with the identity
   in `KeychainClientIdentity`, only while `clientCertificateAlias` is set. The Darwin engine owns its session pool,
   so `KtorServiceClient` makes a new client when the certificate changes.
+- iOS App Transport Security applies to every Darwin request, the `ws://` API socket included, not only to
+  artwork. Plain `http` and `ws` work to private LAN addresses without a key. `Info.plist` exempts the Tailscale
+  ranges (`100.64.0.0/10`, `fd7a:115c:a1e0::/48`, `*.ts.net`). Every other cleartext host fails with
+  `NSURLErrorAppTransportSecurityRequiresSecureConnection` (-1022). Do not add `NSAllowsArbitraryLoads`.
 
 ## Artwork Loading
 
@@ -195,6 +199,25 @@ actual class PlatformFeature {
 - Use `remember`/`derivedStateOf` for computed values
 - Split large composables into smaller files by meaning
 - Previews only when explicitly requested
+
+## Adaptive Layout and Folds
+
+- `WindowClass.isWide()` (medium width or wider) selects the wide layouts. Read the width through
+  `WindowClass`. Inside a pane, `LocalPaneWidth` replaces the window width, so a screen in a narrow pane
+  gets its phone layout.
+- On a wide window, `TwoPaneSceneStrategy` (`ui/compose/nav/`) shows the entry with `listPane()` metadata
+  (the Library categories) beside the top entry of its stack. A tap on a category replaces the open
+  category, so back returns to the categories.
+- `LocalFoldState` (`ui/compose/fold/`) holds the posture (`Flat`, `Book` or `Tabletop`, with the
+  division in window dp) and the `HingeStatus`. Lay out from the division, not from the hinge.
+  Android gets the fold from the material3-adaptive window posture (Jetpack WindowManager
+  `FoldingFeature`). iOS gets it from Swift (`iosApp/iosApp/ContentView.swift`):
+  `UIView.reservedRegions(kind: .division)` and `UIHingeInteraction` go through `KmpHelper` to
+  `FoldStateSource`. That Swift code needs the iOS 27.1 SDK, so it compiles only with the Swift flag
+  `IPHONE_DUO_SDK`. Without the flag, iOS is always flat.
+- `FoldAwareRow` splits two panes at a book fold. `FoldTracker` finds where a fold crosses one layout.
+  `FoldAwareGridCells` uses an even column count when a book fold crosses the grid. In tabletop
+  posture, the full player puts the artwork above the fold and the controls below it.
 
 ## State Management
 

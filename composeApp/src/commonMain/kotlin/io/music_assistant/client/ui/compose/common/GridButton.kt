@@ -1,11 +1,11 @@
 package io.music_assistant.client.ui.compose.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,13 +23,16 @@ fun GridButton(
     modifier: Modifier = Modifier,
     text: String,
     icon: ImageVector? = null,
+    selected: Boolean = false,
     onClick: () -> Unit = {},
 ) {
+    val containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
     Row(
         modifier = modifier
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, onClick = onClick)
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
+            .background(containerColor)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -39,7 +42,7 @@ fun GridButton(
                 modifier = Modifier.size(30.dp),
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                tint = contentColor,
             )
         }
 
@@ -48,7 +51,7 @@ fun GridButton(
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = contentColor,
         )
     }
 }

@@ -44,6 +44,21 @@ class MultiBackStackTest {
     }
 
     @Test
+    fun `popAbove keeps the first entries of the current back stack`() {
+        val home = mutableListOf(TestNavKey("home"))
+        val library = mutableListOf(TestNavKey("library"), TestNavKey("albums"), TestNavKey("album"))
+        val multiBackStack = MultiBackStack(listOf(home, library))
+        multiBackStack.currentBackStack = 1
+
+        multiBackStack.popAbove(2)
+        assertEquals(listOf(TestNavKey("library"), TestNavKey("albums")), library)
+
+        multiBackStack.popAbove(0)
+        assertEquals(listOf(TestNavKey("library")), library)
+        assertEquals(listOf(TestNavKey("home")), home)
+    }
+
+    @Test
     fun `resetCurrentBackStack resets ScreenState if the back stack is at its root`() {
         val backStack = mutableListOf(TestNavKey("root"))
         val multiBackStack = MultiBackStack(listOf(backStack))

@@ -2,6 +2,8 @@
 
 package io.music_assistant.client.di
 
+import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
 import co.touchlab.kermit.Logger
 import io.music_assistant.client.api.DeepLinkBus
 import io.music_assistant.client.api.Request
@@ -48,6 +50,8 @@ import io.music_assistant.client.settings.carBulkActions
 import io.music_assistant.client.settings.carTapAction
 import io.music_assistant.client.settings.planCarItemDispatch
 import io.music_assistant.client.settings.toCarDispatch
+import io.music_assistant.client.ui.compose.fold.FoldStateSource
+import io.music_assistant.client.ui.compose.fold.HingeStatus
 import io.music_assistant.client.ui.compose.library.reconcileCarTabs
 import io.music_assistant.client.ui.compose.library.visibleCategories
 import io.music_assistant.client.utils.HasConnectionData
@@ -92,6 +96,7 @@ object KmpHelper : KoinComponent {
     private val playDispatcher: PlayDispatcher by inject()
     private val settingsRepository: SettingsRepository by inject()
     private val volumeButtonService: VolumeButtonService by inject()
+    private val foldStateSource: FoldStateSource by inject()
 
     // Resolve per request so the active Koin graph supplies the current repository.
     private val artworkRepository: ArtworkRepository
@@ -138,6 +143,24 @@ object KmpHelper : KoinComponent {
 
     fun onPlatformVolumeButtonPressed() {
         volumeButtonService.onPlatformVolumeButtonPressed()
+    }
+
+    /**
+     * The active fold division of iPhone Duo, in points in the coordinates of the Compose host
+     * view, which match Compose window dp. Swift calls it from the reserved-region tracker.
+     */
+    fun reportFoldDivision(left: Double, top: Double, width: Double, height: Double) {
+        foldStateSource.reportDivision(DpRect(left.dp, top.dp, (left + width).dp, (top + height).dp))
+    }
+
+    /** No fold division is active: the device is fully open, or it has no fold. */
+    fun clearFoldDivision() {
+        foldStateSource.reportDivision(null)
+    }
+
+    /** The hinge from `UIHingeInteraction`, or null when the view hierarchy reports no hinge. */
+    fun reportHinge(status: HingeStatus?) {
+        foldStateSource.reportHinge(status)
     }
 
     // MARK: - External Consumer Lifecycle (CarPlay)

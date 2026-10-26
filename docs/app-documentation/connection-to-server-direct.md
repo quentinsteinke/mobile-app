@@ -19,9 +19,7 @@ Connecting via hostname is recommended, as it ensures you can still reach your s
 
 Once your details are filled in, tap **Connect** to move on to the next step.
 
-> **Known issue (iOS):** Artwork may be missing in certain setups, for example peer-to-peer mesh VPN setups such as Tailscale. We're aware of this and looking into it, but we don't have an ETA on a fix yet.
->
-> This happens because iOS App Transport Security (ATS) blocks image requests to insecure hosts, with an exception for local networks. On your LAN, artwork loads fine, but over Tailscale and similar VPNs the server appears to the phone as a remote host, so ATS kicks in and blocks the requests.
+> **Note (iOS):** Without TLS, the iOS app connects only to local network addresses and to Tailscale addresses (`100.x.y.z` from `100.64.0.0/10`, `fd7a:115c:a1e0::/48`, and `*.ts.net` names). iOS App Transport Security (ATS) blocks a plain connection to every other address, for example a server behind a different VPN or on the internet. Enable **Use TLS** for those servers.
 
 ### Connecting over the internet without exposing the MA port
 

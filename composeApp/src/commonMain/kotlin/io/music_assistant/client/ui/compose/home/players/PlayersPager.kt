@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -75,6 +74,7 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -116,6 +116,7 @@ import io.music_assistant.client.ui.compose.common.rememberAnimatedPlayerColors
 import io.music_assistant.client.ui.compose.common.rememberDynamicColorsEnabled
 import io.music_assistant.client.ui.compose.common.rememberExtractedColorsSource
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
+import io.music_assistant.client.ui.compose.fold.FoldAwareRow
 import io.music_assistant.client.ui.compose.home.CollapsibleQueue
 import io.music_assistant.client.ui.compose.home.HomeScreenViewModel
 import io.music_assistant.client.ui.compose.home.HorizontalPagerIndicator
@@ -152,9 +153,19 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
-// Width split between the player pane and the side queue pane when both are shown.
-private const val PLAYER_PANE_WEIGHT = 2f
-private const val QUEUE_PANE_WEIGHT = 1f
+/**
+ * The width of the player beside the side queue. A wide window gives the player two thirds, up
+ * to the expanded breakpoint. A medium one, such as an unfolded iPhone Duo, gives it a little
+ * over half, so the artwork stays large and the queue stays wide enough to read.
+ */
+private fun playerPaneWidth(maxWidth: Dp): Dp = when {
+    maxWidth >= WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND.dp ->
+        (maxWidth * 2 / 3).coerceAtMost(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND.dp)
+
+    else -> maxWidth * MEDIUM_PLAYER_PANE_FRACTION
+}
+
+private const val MEDIUM_PLAYER_PANE_FRACTION = 0.55f
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -556,9 +567,8 @@ private fun ExpandedPlayerPage(
     onQueueDjSelected: (queueId: String, hostId: String?) -> Unit = { _, _ -> },
 ) {
     // The queue sits beside the player whenever the window is wide (see
-    // [WindowClass.isWide]); otherwise it collapses underneath it. The two panes
-    // then split the width 2:1, so the layout degrades smoothly from a large
-    // tablet down to a phone in landscape.
+    // [WindowClass.isWide]); otherwise it collapses underneath it. [playerPaneWidth]
+    // splits the width between the two panes.
     val showSideQueue = WindowClass.isWide()
     // Navigating away from the player collapses it, so the target screen is visible.
     val navigateAndClose: (AppMediaItem) -> Unit = remember(navigateToItem, onClose) {
@@ -664,15 +674,8 @@ private fun ExpandedPlayerPage(
             }
         }
 
-        Row {
-            Column(
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .conditional(showSideQueue) {
-                        weight(PLAYER_PANE_WEIGHT)
-                            .widthIn(max = WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND.dp)
-                    },
-            ) {
+        val playerPane: @Composable () -> Unit = {
+            Column(modifier = Modifier.padding(top = 8.dp)) {
                 Column(
                     modifier = Modifier
                         .conditional(
@@ -901,23 +904,31 @@ private fun ExpandedPlayerPage(
                     )
                 }
             }
+        }
 
-            if (showSideQueue && player.queue is DataState.Data) {
-                Queue(
-                    modifier = Modifier.weight(QUEUE_PANE_WEIGHT),
-                    queue = player.queue,
-                    onGoToLibrary = onClose,
-                    isQueueExpanded = true,
-                    isCurrentPage = isCurrentPage,
-                    contentPadding = contentPadding,
-                    queueAction = queueAction,
-                    onAddToPlaylist = onAddToPlaylist,
-                    livePositionFlow = livePositionFlow,
-                    onChapterClick = { chapter ->
-                        playerAction(player, PlayerAction.SeekTo(chapterSeekSeconds(chapter.start)))
-                    },
-                )
-            }
+        // In book posture the player and the queue split at the fold (see FoldAwareRow).
+        if (showSideQueue && player.queue is DataState.Data) {
+            FoldAwareRow(
+                startWidth = ::playerPaneWidth,
+                start = playerPane,
+                end = {
+                    Queue(
+                        queue = player.queue,
+                        onGoToLibrary = onClose,
+                        isQueueExpanded = true,
+                        isCurrentPage = isCurrentPage,
+                        contentPadding = contentPadding,
+                        queueAction = queueAction,
+                        onAddToPlaylist = onAddToPlaylist,
+                        livePositionFlow = livePositionFlow,
+                        onChapterClick = { chapter ->
+                            playerAction(player, PlayerAction.SeekTo(chapterSeekSeconds(chapter.start)))
+                        },
+                    )
+                },
+            )
+        } else {
+            playerPane()
         }
     }
 }
@@ -1249,7 +1260,7 @@ fun ExpandedPlayerPageMediumScreenPreview() {
             queueAction = {},
             allPlayers = listOf(playerData),
             moveToPlayer = {},
-            isWideScreen = false,
+            isWideScreen = true,
             sendspinState = null,
             isQueueExpanded = false,
             onExpandQueue = {},
@@ -1331,7 +1342,7 @@ fun ExpandedPlayerPageExpandedScreenPlusPreview() {
             queueAction = {},
             allPlayers = listOf(playerData),
             moveToPlayer = {},
-            isWideScreen = false,
+            isWideScreen = true,
             sendspinState = null,
             isQueueExpanded = false,
             onExpandQueue = {},

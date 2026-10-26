@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyGridScope
@@ -108,6 +107,8 @@ import io.music_assistant.client.ui.compose.common.rememberDynamicColorsEnabled
 import io.music_assistant.client.ui.compose.common.rememberExtractedColorsSource
 import io.music_assistant.client.ui.compose.common.toDisplayString
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
+import io.music_assistant.client.ui.compose.fold.FoldAwareGridCells
+import io.music_assistant.client.ui.compose.fold.rememberFoldTracker
 import io.music_assistant.client.ui.compose.grid.gridItemMinSize
 import io.music_assistant.client.ui.compose.home.players.LyricsSheet
 import io.music_assistant.client.ui.compose.item.artist.ArtistDetailsViewModel
@@ -750,10 +751,11 @@ private fun DetailGrid(
 ) {
     val gridPadding = contentPadding + PaddingValues(4.dp)
     NoOverscroll {
+        val fold = rememberFoldTracker()
         LazyVerticalGrid(
             state = gridState,
-            modifier = Modifier.fillMaxSize().testTag(ItemDetailsScreenSemantics.LIST_TAG),
-            columns = GridCells.Adaptive(minSize = gridItemMinSize()),
+            modifier = Modifier.fillMaxSize().testTag(ItemDetailsScreenSemantics.LIST_TAG).then(fold.modifier),
+            columns = FoldAwareGridCells(minSize = gridItemMinSize(), evenColumns = fold.bookSpan() != null),
             contentPadding = gridPadding,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
