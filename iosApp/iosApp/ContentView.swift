@@ -34,15 +34,18 @@ struct ComposeView: UIViewControllerRepresentable {
 /// system color that the iOS Compose theme also uses.
 struct ContentView: View {
     @StateObject private var shell = TabShellModel()
+    /// The safe area of the window, in window coordinates. The shell stack fills it.
     @State private var safeAreaFrame: CGRect = .zero
-    @State private var tabContentFrame: CGRect = .zero
+    /// The area of the open tab that is free of the tab bar, in window coordinates.
+    @State private var tabArea: CGRect = .zero
 
-    /// The content area of the open tab, or the whole safe area while no tab bar shows. The tab
-    /// content keeps the inset of a hidden tab bar, so the expanded player uses the safe area,
-    /// as a full-screen player does.
+    /// Where the Compose view goes, in the coordinates of the shell stack: the free area of the
+    /// open tab, or the whole safe area while no tab bar shows (the settings screen, and the
+    /// expanded player, which covers the screen as a full-screen player does).
     private var composeFrame: CGRect {
-        guard let state = shell.state, state.active, !state.playerExpanded else { return safeAreaFrame }
-        return tabContentFrame
+        let showsTabs = shell.state.map { $0.active && !$0.playerExpanded } ?? false
+        let frame = showsTabs && !tabArea.isEmpty ? tabArea : safeAreaFrame
+        return frame.offsetBy(dx: -safeAreaFrame.minX, dy: -safeAreaFrame.minY)
     }
 
     var body: some View {
@@ -51,7 +54,7 @@ struct ContentView: View {
                 TabView(selection: tabSelection(state)) {
                     ForEach(Array(state.tabs.enumerated()), id: \.offset) { index, tab in
                         Tab(tab.title, systemImage: tab.symbol, value: index) {
-                            ComposeFrameReader(frame: $tabContentFrame)
+                            TabAreaProbe(area: $tabArea)
                                 // The expanded player covers the content, as in Compose.
                                 .toolbarVisibility(state.playerExpanded ? .hidden : .automatic, for: .tabBar)
                         }
@@ -76,11 +79,9 @@ struct ContentView: View {
                 .clipped()
                 .offset(x: composeFrame.minX, y: composeFrame.minY)
         }
-        // ComposeFrameReader reports in this coordinate space, so the offset places the Compose
-        // view exactly over the reported area. The stack and the overlay stay inside the safe
-        // area: where a view ignores it, SwiftUI hands the window insets to the hosted Compose
-        // view, and Compose would pad them a second time.
-        .coordinateSpace(.named(ComposeFrameReader.space))
+        // The stack and the overlay stay inside the safe area: where a view ignores it, SwiftUI
+        // hands the window insets to the hosted Compose view, and Compose would pad them a
+        // second time.
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
     }
 
@@ -94,29 +95,91 @@ struct ContentView: View {
     }
 }
 
-/// An empty view that reports its frame in the coordinates of the shell stack. It stays inside
-/// the safe area, so inside a tab that is the area left by the tab bar or the sidebar, and
-/// elsewhere the safe area of the window. The frame is already safe; its proxy still lists the
-/// insets of the container, so subtracting them would take them off twice. The keyboard is not
-/// part of it, because Compose moves the focused field above the keyboard itself.
+/// An empty view that reports its frame in window coordinates, rounded to whole points so that
+/// subpixel layout noise does not resize Compose.
 private struct ComposeFrameReader: View {
-    static let space = "shell"
-
     @Binding var frame: CGRect
 
     var body: some View {
         Color.clear
             .onGeometryChange(for: CGRect.self) { proxy in
-                // Whole points, so subpixel layout noise does not resize Compose.
-                let frame = proxy.frame(in: .named(Self.space))
-                return CGRect(
-                    x: frame.minX.rounded(),
-                    y: frame.minY.rounded(),
-                    width: frame.width.rounded(),
-                    height: frame.height.rounded()
-                )
+                proxy.frame(in: .global).roundedToPoints()
             } action: { frame = $0 }
             .ignoresSafeArea(.keyboard)
+    }
+}
+
+/// Reports the area of the open tab that Compose can use, in window coordinates: the tab's
+/// column inside the window's safe area, cut back to the edge of the visible tab bar.
+///
+/// It asks UIKit, because the safe area of the tab content is not reliable here. On the unfolded
+/// iPhone Duo in portrait, the tab content reserves a band at the top while the tab bar floats
+/// at the bottom, over the content.
+private struct TabAreaProbe: UIViewControllerRepresentable {
+    @Binding var area: CGRect
+
+    func makeUIViewController(context: Context) -> TabAreaProbeController {
+        TabAreaProbeController()
+    }
+
+    func updateUIViewController(_ controller: TabAreaProbeController, context: Context) {
+        controller.onChange = { area = $0 }
+        controller.view.setNeedsLayout()
+    }
+}
+
+final class TabAreaProbeController: UIViewController {
+    var onChange: ((CGRect) -> Void)?
+    private var reported: CGRect?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        report()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        report()
+    }
+
+    private func report() {
+        guard let window = view.window else { return }
+        let safe = window.bounds.inset(by: window.safeAreaInsets)
+        var area = view.convert(view.bounds, to: window).intersection(safe)
+        if let bar = tabBarController?.tabBar, !bar.isHidden, bar.alpha > 0.01, bar.window != nil {
+            area = area.excluding(bar.convert(bar.bounds, to: window))
+        }
+        area = area.roundedToPoints()
+        guard area != reported else { return }
+        reported = area
+        // Not during the layout pass that SwiftUI may be running.
+        DispatchQueue.main.async { [weak self] in self?.onChange?(area) }
+    }
+}
+
+private extension CGRect {
+    func roundedToPoints() -> CGRect {
+        CGRect(x: minX.rounded(), y: minY.rounded(), width: width.rounded(), height: height.rounded())
+    }
+
+    /// This rectangle cut back to the edge of a bar that overlaps it. A tall bar is at a side,
+    /// as the vertical bar of iPhone Duo; a wide one is at the top or the bottom.
+    func excluding(_ bar: CGRect) -> CGRect {
+        guard intersects(bar), !isNull else { return self }
+        var result = self
+        switch (bar.height > bar.width, bar.midX > midX, bar.midY > midY) {
+        case (true, true, _): result.size.width = max(0, bar.minX - minX)
+        case (true, false, _): result = CGRect(x: bar.maxX, y: minY, width: max(0, maxX - bar.maxX), height: height)
+        case (false, _, true): result.size.height = max(0, bar.minY - minY)
+        case (false, _, false): result = CGRect(x: minX, y: bar.maxY, width: width, height: max(0, maxY - bar.maxY))
+        }
+        return result
     }
 }
 
