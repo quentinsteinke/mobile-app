@@ -32,7 +32,8 @@ import kotlin.math.roundToInt
 
 /**
  * The SF Symbol that replaces a vector icon on iOS, keyed by [ImageVector.name]. Material icons
- * are named "<Theme>.<Icon>", and the custom icons in `ui/compose/common/icons` by their own name.
+ * are named "<Theme>.<Icon>"; the custom icons in `ui/compose/common/icons`, Tabler and FontAwesome
+ * icons by their own name.
  * An icon that is not in the table, or a symbol that this iOS version lacks, keeps its vector.
  */
 private val symbolNames = mapOf(
@@ -133,6 +134,18 @@ private val symbolNames = mapOf(
     "Genre" to "guitars",
     "BookAudio" to "headphones",
     "Bookshelf" to "books.vertical",
+    // FontAwesome: the appearance choice in Settings
+    "Sun" to "sun.max.fill",
+    "Adn" to "circle.lefthalf.filled",
+    "Moon" to "moon.fill",
+    // Tabler
+    "GripVertical" to "line.3.horizontal",
+    "Plus" to "plus",
+    "ThumbDown" to "hand.thumbsdown",
+    "Heart" to "heart",
+    "HeartBroken" to "heart.slash",
+    "FolderPlus" to "folder.badge.plus",
+    "FolderMinus" to "folder.badge.minus",
 )
 
 /** The SF Symbol name for [imageVector], for native chrome that draws the symbol itself. */
