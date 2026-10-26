@@ -2,30 +2,20 @@ package io.music_assistant.client.utils
 
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 
 object WindowClass {
     /**
-     * True when the window has room to spend width instead of height: it is either
-     * wide in absolute terms, or wider than it is tall. Drives the side-by-side
-     * layouts (navigation rail, row-form item header, inline player controls),
-     * which all trade vertical space for horizontal space.
+     * True when the window is at least medium width, in either orientation. Drives the
+     * side-by-side layouts (navigation rail, row-form item header, inline player
+     * controls, queue beside the player). A compact-width window keeps the phone layout.
      *
-     * A compact phone in landscape qualifies. That is deliberate: landscape is the
-     * case those layouts were designed for.
+     * Medium width in portrait counts: an unfolded foldable (the iPhone Duo inner
+     * display is 669 dp wide) or an iPad mini in portrait has room for a second pane.
      */
     @Composable
-    fun isWide(): Boolean = isAtLeastExpanded() || (isAtLeastMedium() && isLandscape())
-
-    @Composable
-    fun isLandscape(): Boolean =
-        with(LocalWindowInfo.current.containerSize) { width > height }
-
-    @Composable
-    private fun isAtLeastExpanded(): Boolean =
-        isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+    fun isWide(): Boolean = isAtLeastMedium()
 
     @Composable
     fun isAtLeastMedium(): Boolean =
