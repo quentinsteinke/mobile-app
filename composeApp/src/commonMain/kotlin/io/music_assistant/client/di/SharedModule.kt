@@ -47,6 +47,7 @@ import io.music_assistant.client.ui.compose.auth.AuthenticationViewModel
 import io.music_assistant.client.ui.compose.common.DominantColorViewModel
 import io.music_assistant.client.ui.compose.common.providers.MdiCodepoints
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
+import io.music_assistant.client.ui.compose.fold.FoldStateSource
 import io.music_assistant.client.ui.compose.home.HomeScreenViewModel
 import io.music_assistant.client.ui.compose.home.players.DspSettingsViewModel
 import io.music_assistant.client.ui.compose.home.players.QueueDjViewModel
@@ -103,6 +104,7 @@ fun sharedModule(
         singleOf(::ErrorMessageBus)
         singleOf(::DeepLinkBus)
         singleOf(::VolumeButtonService)
+        singleOf(::FoldStateSource)
         single<ArtworkDiskStore> {
             ArtworkDiskStore(
                 cache = buildArtworkDiskCache(toArtworkLoaderPlatformContext(get<PlatformContext>())),

@@ -35,6 +35,7 @@ import io.music_assistant.client.ui.compose.common.ProvideGrantedScopes
 import io.music_assistant.client.ui.compose.common.ProvidePlayMediaSupport
 import io.music_assistant.client.ui.compose.common.dismissKeyboardOnTap
 import io.music_assistant.client.ui.compose.common.items.ProvideClickActionPrefs
+import io.music_assistant.client.ui.compose.fold.ProvideFoldState
 import io.music_assistant.client.ui.compose.nav.exitApp
 import io.music_assistant.client.ui.theme.AppTheme
 import io.music_assistant.client.ui.theme.SystemAppearance
@@ -100,7 +101,9 @@ fun App() {
                     ProvideDislikeSupport {
                         ProvidePlayMediaSupport {
                             ProvideClickActionPrefs {
-                                TopLevelNavRoot()
+                                ProvideFoldState {
+                                    TopLevelNavRoot()
+                                }
                             }
                         }
                     }
