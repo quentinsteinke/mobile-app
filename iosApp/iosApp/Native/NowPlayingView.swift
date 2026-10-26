@@ -6,7 +6,10 @@ import ComposeApp
 /// (the unfolded iPhone Duo, landscape) puts the artwork or the queue beside the controls.
 struct NowPlayingView: View {
     @ObservedObject var model: PlayerModel
+    /// Full screen (the unfolded iPhone Duo) rather than a sheet, so it needs its own close button.
+    var fullScreen = false
     @State private var showsQueue = false
+    @State private var fold: FoldDivision?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -14,8 +17,8 @@ struct NowPlayingView: View {
             ZStack {
                 NowPlayingBackground(url: model.current?.artworkUrl)
                 if let nowPlaying = model.current {
-                    if geometry.size.width > geometry.size.height {
-                        wideLayout(nowPlaying)
+                    if fold?.splits(geometry.size) == true || geometry.size.width > geometry.size.height {
+                        splitLayout(nowPlaying)
                     } else {
                         tallLayout(nowPlaying)
                     }
@@ -28,10 +31,34 @@ struct NowPlayingView: View {
                 }
             }
         }
+        .readsFold(into: $fold)
+        .overlay(alignment: .topLeading) {
+            if fullScreen {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .background(.white.opacity(0.12), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 20)
+                .padding(.top, 12)
+                .accessibilityLabel(NativeStrings.close)
+            }
+        }
         .environment(\.colorScheme, .dark)
         .tint(.white)
         .presentationDragIndicator(.visible)
         .presentationBackground(.black)
+    }
+
+    /// Drags the artwork down to close, as the sheet does.
+    private var closeDrag: some Gesture {
+        DragGesture(minimumDistance: 30).onEnded { drag in
+            if drag.translation.height > 120, abs(drag.translation.width) < drag.translation.height {
+                dismiss()
+            }
+        }
     }
 
     private func tallLayout(_ nowPlaying: NativeNowPlaying) -> some View {
@@ -43,34 +70,42 @@ struct NowPlayingView: View {
                 Spacer(minLength: 8)
                 ArtworkCard(nowPlaying: nowPlaying)
                     .frame(maxWidth: 420)
+                    .gesture(closeDrag)
                     .transition(.opacity)
                 Spacer(minLength: 8)
             }
             ControlsColumn(model: model, nowPlaying: nowPlaying, showsQueue: $showsQueue)
+                .frame(maxWidth: 460)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 28)
+        .padding(.top, fullScreen ? 64 : 28)
         .padding(.bottom, 12)
         .animation(.smooth, value: showsQueue)
     }
 
-    private func wideLayout(_ nowPlaying: NativeNowPlaying) -> some View {
-        HStack(spacing: 40) {
+    /// The artwork (or the queue) beside the controls on a wide window and on each side of the
+    /// fold in book posture; above the fold, with the controls below it, in tabletop posture.
+    private func splitLayout(_ nowPlaying: NativeNowPlaying) -> some View {
+        FoldSplit(fallback: .horizontal) {
             Group {
                 if showsQueue {
                     QueueView(nowPlaying: nowPlaying)
+                        .padding(.top, fullScreen ? 52 : 0)
                 } else {
                     ArtworkCard(nowPlaying: nowPlaying)
+                        .gesture(closeDrag)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(24)
             .transition(.opacity)
+        } second: {
             ControlsColumn(model: model, nowPlaying: nowPlaying, showsQueue: $showsQueue)
                 .frame(maxWidth: 460)
-                .frame(maxHeight: .infinity, alignment: .bottom)
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.horizontal, 32)
-        .padding(.vertical, 28)
+        .padding(.vertical, 12)
         .animation(.smooth, value: showsQueue)
     }
 }

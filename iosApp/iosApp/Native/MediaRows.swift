@@ -77,6 +77,30 @@ struct MediaRow: View {
     }
 }
 
+/// The margin at the sides of every native page.
+let pageMargin: CGFloat = 20
+
+extension View {
+    /// The insets of a row in a plain list, the same on every page. The system margins of a plain
+    /// list are not reliable here: on the unfolded iPhone Duo they drop to zero.
+    func mediaRowInsets() -> some View {
+        listRowInsets(EdgeInsets(top: 6, leading: pageMargin, bottom: 6, trailing: pageMargin))
+    }
+
+    /// Keeps the scroll content at most [maxWidth] wide, centered in a window [width] wide. A
+    /// narrower window keeps the system margins, which also keep clear of the vertical bars of
+    /// the folded iPhone Duo.
+    @ViewBuilder
+    func readableWidth(_ maxWidth: CGFloat, in width: CGFloat) -> some View {
+        let margin = (width - maxWidth) / 2
+        if margin > pageMargin {
+            contentMargins(.horizontal, margin, for: .scrollContent)
+        } else {
+            self
+        }
+    }
+}
+
 /// The "E" badge of explicit content.
 struct ExplicitBadge: View {
     var body: some View {

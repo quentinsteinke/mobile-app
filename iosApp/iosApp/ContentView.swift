@@ -39,6 +39,10 @@ struct ContentView: View {
     @State private var safeAreaFrame: CGRect = .zero
     /// The area of the open tab that is free of the tab bar, in window coordinates.
     @State private var tabArea: CGRect = .zero
+    /// The visible tab bar in window coordinates, or nil while none shows.
+    @State private var tabBar: CGRect?
+    /// The fold of iPhone Duo in the coordinates of the shell stack.
+    @State private var fold: FoldDivision?
     /// A tab that only Swift selected (Settings), shown instead of Kotlin's selected tab.
     @State private var localSelection: Int?
     /// The Compose settings screen was asked for (More Settings), instead of the native one.
@@ -122,9 +126,19 @@ struct ContentView: View {
     private var miniPlayerFrame: CGRect? {
         guard showsTabs, player.current != nil else { return nil }
         let area = tabAreaInShell
-        let margin: CGFloat = 10
+        let margin: CGFloat = 12
         let height: CGFloat = 60
-        return CGRect(x: area.minX + margin, y: area.maxY - height - 8, width: max(0, area.width - 2 * margin), height: height)
+        // Beside a vertical tab bar (iPhone Duo), the bottoms of the two line up. Above a bottom
+        // tab bar, or with no bar, the player sits a margin above the free area's bottom.
+        let bottom = tabBar.flatMap { bar in
+            bar.height > bar.width ? min(bar.maxY - safeAreaFrame.minY, safeArea.maxY) : nil
+        } ?? area.maxY - 8
+        var minX = area.minX + margin
+        // In book posture the player stays on the side of the fold next to the tab bar.
+        if let fold, fold.posture == .book, fold.frame.maxX > area.minX, fold.frame.minX < area.maxX {
+            minX = max(minX, fold.frame.maxX + foldGutter)
+        }
+        return CGRect(x: minX, y: bottom - height, width: max(0, area.maxX - margin - minX), height: height)
     }
 
 
@@ -137,9 +151,9 @@ struct ContentView: View {
                             Group {
                                 if Self.nativeTabs.contains(tab.key) {
                                     nativeTab(tab.key)
-                                        .background(TabAreaProbe(area: $tabArea))
+                                        .background(TabAreaProbe(area: $tabArea, bar: $tabBar))
                                 } else {
-                                    TabAreaProbe(area: $tabArea)
+                                    TabAreaProbe(area: $tabArea, bar: $tabBar)
                                 }
                             }
                                 // The expanded player covers the content, as in Compose.
@@ -158,6 +172,7 @@ struct ContentView: View {
             }
         }
         .background(ComposeFrameReader(frame: $safeAreaFrame))
+        .readsFold(into: $fold)
         .onChange(of: shell.state?.active) { _, active in
             if active == true { composeSettingsRequested = false }
         }
@@ -184,13 +199,27 @@ struct ContentView: View {
                     .offset(x: frame.minX, y: frame.minY)
             }
         }
-        .sheet(isPresented: $player.isNowPlayingPresented) {
+        // A sheet on a narrow window; full screen on a wide one (the unfolded iPhone Duo), where a
+        // sheet is a small card in the middle.
+        .sheet(isPresented: nowPlayingPresented(fullScreen: false)) {
             NowPlayingView(model: player)
+        }
+        .fullScreenCover(isPresented: nowPlayingPresented(fullScreen: true)) {
+            NowPlayingView(model: player, fullScreen: true)
         }
         // The stack and the overlay stay inside the safe area: where a view ignores it, SwiftUI
         // hands the window insets to the hosted Compose view, and Compose would pad them a
         // second time.
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+    }
+
+    private var isWide: Bool { safeAreaFrame.width >= 600 }
+
+    private func nowPlayingPresented(fullScreen: Bool) -> Binding<Bool> {
+        Binding(
+            get: { player.isNowPlayingPresented && isWide == fullScreen },
+            set: { player.isNowPlayingPresented = $0 }
+        )
     }
 
     /// Reads the selected tab from Kotlin and sends taps to Kotlin. A tap on the open tab also
@@ -233,20 +262,21 @@ private struct ComposeFrameReader: View {
 /// at the bottom, over the content.
 private struct TabAreaProbe: UIViewControllerRepresentable {
     @Binding var area: CGRect
+    @Binding var bar: CGRect?
 
     func makeUIViewController(context: Context) -> TabAreaProbeController {
         TabAreaProbeController()
     }
 
     func updateUIViewController(_ controller: TabAreaProbeController, context: Context) {
-        controller.onChange = { area = $0 }
+        controller.onChange = { area = $0; bar = $1 }
         controller.view.setNeedsLayout()
     }
 }
 
 final class TabAreaProbeController: UIViewController {
-    var onChange: ((CGRect) -> Void)?
-    private var reported: CGRect?
+    var onChange: ((CGRect, CGRect?) -> Void)?
+    private var reported: (area: CGRect, bar: CGRect?)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -268,14 +298,17 @@ final class TabAreaProbeController: UIViewController {
         guard let window = view.window else { return }
         let safe = window.bounds.inset(by: window.safeAreaInsets)
         var area = view.convert(view.bounds, to: window).intersection(safe)
+        var barFrame: CGRect?
         if let bar = tabBarController?.tabBar, !bar.isHidden, bar.alpha > 0.01, bar.window != nil {
-            area = area.excluding(bar.convert(bar.bounds, to: window))
+            let frame = bar.convert(bar.bounds, to: window).roundedToPoints()
+            area = area.excluding(frame)
+            barFrame = frame
         }
         area = area.roundedToPoints()
-        guard area != reported else { return }
-        reported = area
+        guard reported.map({ $0.area != area || $0.bar != barFrame }) ?? true else { return }
+        reported = (area, barFrame)
         // Not during the layout pass that SwiftUI may be running.
-        DispatchQueue.main.async { [weak self] in self?.onChange?(area) }
+        DispatchQueue.main.async { [weak self] in self?.onChange?(area, barFrame) }
     }
 }
 

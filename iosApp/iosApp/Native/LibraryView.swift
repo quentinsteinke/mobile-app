@@ -1,35 +1,98 @@
 import SwiftUI
 import ComposeApp
 
-/// The native Library tab: the categories, then a list per category and the detail pages.
+/// The native Library tab: the categories, then a list per category and the detail pages. A wide
+/// window (the unfolded iPhone Duo) keeps the categories in a sidebar beside the open category,
+/// and in book posture the sidebar ends at the fold.
 struct LibraryView: View {
     /// Room at the bottom for the mini player, which floats over the tab.
     var bottomInset: CGFloat = 0
 
     @StateObject private var model = LibraryCategoriesModel()
     @State private var path: [LibraryRoute] = []
+    @State private var selected: MediaType?
+    @State private var fold: FoldDivision?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        NavigationStack(path: $path) {
-            List(model.categories, id: \.name) { category in
-                if let mediaType = category.mediaType {
-                    NavigationLink(value: LibraryRoute.list(mediaType)) {
-                        Label {
-                            Text(mediaType.libraryTitle)
-                                .font(.title3)
-                        } icon: {
-                            Image(systemName: mediaType.librarySymbol)
-                                .foregroundStyle(.tint)
-                        }
-                        .padding(.vertical, 6)
+        if sizeClass == .regular {
+            splitView
+        } else {
+            NavigationStack(path: $path) {
+                List(model.categories, id: \.name) { category in
+                    if let mediaType = category.mediaType {
+                        NavigationLink(value: LibraryRoute.list(mediaType)) { CategoryLabel(mediaType: mediaType) }
+                            .mediaRowInsets()
+                            .listSectionSeparator(.hidden, edges: .top)
                     }
                 }
+                .listStyle(.plain)
+                .navigationTitle("Library")
+                .nativeDestinations(bottomInset: bottomInset)
+                .safeAreaPadding(.bottom, bottomInset)
             }
-            .listStyle(.plain)
-            .navigationTitle("Library")
-            .nativeDestinations(bottomInset: bottomInset)
-            .safeAreaPadding(.bottom, bottomInset)
         }
+    }
+
+    private var splitView: some View {
+        GeometryReader { geometry in
+            NavigationSplitView(columnVisibility: .constant(.all)) {
+                List(model.categories, id: \.name, selection: $selected) { category in
+                    if let mediaType = category.mediaType {
+                        CategoryLabel(mediaType: mediaType).tag(mediaType)
+                    }
+                }
+                .navigationTitle("Library")
+                .navigationSplitViewColumnWidth(sidebarWidth(geometry.size))
+                .toolbar(removing: .sidebarToggle)
+                .safeAreaPadding(.bottom, bottomInset)
+            } detail: {
+                NavigationStack(path: $path) {
+                    Group {
+                        if let selected {
+                            LibraryListView(mediaType: selected, bottomInset: bottomInset)
+                                .id(selected)
+                        } else {
+                            ContentUnavailableView("Library", systemImage: "square.stack")
+                        }
+                    }
+                    .nativeDestinations(bottomInset: bottomInset)
+                }
+                // The open category starts past the fold.
+                .safeAreaPadding(.leading, bookFold(geometry.size).map { $0.frame.width + foldGutter } ?? 0)
+            }
+            .navigationSplitViewStyle(.balanced)
+        }
+        .readsFold(into: $fold)
+        .onChange(of: selected) { _, _ in path = [] }
+        .onAppear { if selected == nil { selected = model.categories.compactMap(\.mediaType).first } }
+        .onChange(of: model.categories.count) { _, _ in
+            if selected == nil { selected = model.categories.compactMap(\.mediaType).first }
+        }
+    }
+
+    private func bookFold(_ size: CGSize) -> FoldDivision? {
+        fold.flatMap { $0.posture == .book && $0.splits(size) ? $0 : nil }
+    }
+
+    /// The sidebar ends where the fold starts in book posture.
+    private func sidebarWidth(_ size: CGSize) -> CGFloat {
+        bookFold(size)?.frame.minX ?? 280
+    }
+}
+
+private struct CategoryLabel: View {
+    let mediaType: MediaType
+
+    var body: some View {
+        Label {
+            Text(mediaType.libraryTitle)
+                .font(.title3)
+        } icon: {
+            Image(systemName: mediaType.librarySymbol)
+                .foregroundStyle(.tint)
+        }
+        .padding(.vertical, 6)
     }
 }
 
@@ -92,7 +155,7 @@ struct LibraryListView: View {
                         .onAppear { model.rowAppeared(item) }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, pageMargin)
             .padding(.top, 8)
             pagingFooter
         }
@@ -102,6 +165,8 @@ struct LibraryListView: View {
         List {
             ForEach(model.state.items, id: \.key) { item in
                 itemLink(item) { MediaRow(item: item) }
+                    .mediaRowInsets()
+                    .listSectionSeparator(.hidden, edges: .top)
                     .onAppear { model.rowAppeared(item) }
             }
             pagingFooter

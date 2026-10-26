@@ -38,6 +38,8 @@ struct SettingsView: View {
     @State private var password = ""
     @State private var fieldsFilled = false
     @FocusState private var focusedField: Field?
+    @State private var fold: FoldDivision?
+    @State private var size: CGSize = .zero
 
     private enum Field { case host, port, basePath, remoteId, username, password }
 
@@ -45,20 +47,26 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                if let title = state.localNetworkTitle, let body = state.localNetworkBody {
-                    localNetworkSection(title: title, body: body)
+            Group {
+                // In book posture the connection is on one side of the fold, the options on the
+                // other. A wide window keeps the form at a readable width.
+                if let fold, fold.posture == .book, fold.splits(size) {
+                    FoldSplit(fallback: .horizontal) {
+                        Form { connectionSections }
+                    } second: {
+                        Form { optionSections }
+                    }
+                    .background(Color(uiColor: .systemGroupedBackground))
+                } else {
+                    Form {
+                        connectionSections
+                        optionSections
+                    }
+                    .readableWidth(720, in: size.width)
                 }
-                serverSection
-                if state.phase == .awaitingAuth || state.phase == .signedIn {
-                    accountSection
-                }
-                appearanceSection
-                if state.phase == .signedIn {
-                    LocalPlayerSection(model: model)
-                }
-                generalSection
             }
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+            .readsFold(into: $fold)
             .navigationTitle("Settings")
             .toolbar {
                 if isTopLevel && state.phase == .signedIn {
@@ -77,6 +85,26 @@ struct SettingsView: View {
                 KmpHelper.shared.settingsGoHome()
             }
         }
+    }
+
+    @ViewBuilder
+    private var connectionSections: some View {
+        if let title = state.localNetworkTitle, let body = state.localNetworkBody {
+            localNetworkSection(title: title, body: body)
+        }
+        serverSection
+        if state.phase == .awaitingAuth || state.phase == .signedIn {
+            accountSection
+        }
+    }
+
+    @ViewBuilder
+    private var optionSections: some View {
+        appearanceSection
+        if state.phase == .signedIn {
+            LocalPlayerSection(model: model)
+        }
+        generalSection
     }
 
     private func fillFields() {

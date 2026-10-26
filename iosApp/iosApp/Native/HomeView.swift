@@ -62,7 +62,7 @@ private struct HomeRowView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(row.title)
                 .font(.title2.weight(.bold))
-                .padding(.horizontal, 16)
+                .padding(.horizontal, pageMargin)
             if row.isLoading && row.items.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 150)
@@ -73,7 +73,7 @@ private struct HomeRowView: View {
                             tile(item)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, pageMargin)
                 }
                 .scrollTargetBehavior(.viewAligned)
             }

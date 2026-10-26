@@ -64,6 +64,7 @@ struct SearchView: View {
                         Section {
                             ForEach(section.items, id: \.key) { item in
                                 row(item)
+                                    .mediaRowInsets()
                             }
                         } header: {
                             Text(section.title)

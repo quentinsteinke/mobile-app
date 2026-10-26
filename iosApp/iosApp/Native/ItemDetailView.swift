@@ -8,6 +8,7 @@ struct ItemDetailView: View {
     var bottomInset: CGFloat = 0
 
     @StateObject private var model: ItemDetailsModel
+    @State private var fold: FoldDivision?
 
     init(route: LibraryRoute, bottomInset: CGFloat) {
         self.route = route
@@ -36,8 +37,8 @@ struct ItemDetailView: View {
                     if let header = model.state.header {
                         if header.mediaType == .artist {
                             ArtistPage(model: model, header: header)
-                        } else if geometry.size.width > 760 {
-                            widePage(header)
+                        } else if fold?.splits(geometry.size) == true || geometry.size.width > 760 {
+                            splitPage(header)
                         } else {
                             tallPage(header)
                         }
@@ -45,6 +46,7 @@ struct ItemDetailView: View {
                 }
             }
         }
+        .readsFold(into: $fold)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { overflowMenu } }
@@ -55,22 +57,30 @@ struct ItemDetailView: View {
         List {
             DetailHeader(model: model, header: header)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 8, leading: pageMargin, bottom: 16, trailing: pageMargin))
             itemRows(header)
         }
         .listStyle(.plain)
     }
 
-    private func widePage(_ header: NativeMediaItem) -> some View {
-        HStack(alignment: .top, spacing: 0) {
+    /// The header beside the list on a wide window, and on each side of the fold in book
+    /// posture; the header above the fold and the list below it in tabletop posture.
+    private func splitPage(_ header: NativeMediaItem) -> some View {
+        FoldSplit(fallback: .horizontal, firstWidth: 360) {
             ScrollView {
-                DetailHeader(model: model, header: header)
-                    .padding(24)
+                // Beside the list, the buttons keep to the width of the artwork.
+                DetailHeader(model: model, header: header, buttonsWidth: 300)
+                    .padding(.horizontal, pageMargin)
+                    .padding(.vertical, 12)
             }
-            .frame(width: 340)
-            Divider()
-            List { itemRows(header) }
-                .listStyle(.plain)
+            .scrollBounceBehavior(.basedOnSize)
+        } second: {
+            List {
+                itemRows(header)
+                    .listSectionSeparator(.hidden, edges: .top)
+            }
+            .listStyle(.plain)
+            .contentMargins(.top, 6, for: .scrollContent)
         }
     }
 
@@ -101,6 +111,7 @@ struct ItemDetailView: View {
                     .disabled(!item.isPlayable)
                 }
             }
+            .mediaRowInsets()
             .contextMenu {
                 MediaContextMenu(item: item, canShuffle: false) { _ in model.screen.play(item: item) }
                 if model.state.canEditLibrary && item.canBeFavorited {
@@ -114,6 +125,7 @@ struct ItemDetailView: View {
         if !items.isEmpty {
             DetailFooter(items: items, mediaType: header.mediaType)
                 .listRowSeparator(.hidden)
+                .mediaRowInsets()
         }
     }
 
@@ -153,12 +165,13 @@ struct ItemDetailView: View {
 private struct DetailHeader: View {
     @ObservedObject var model: ItemDetailsModel
     let header: NativeMediaItem
+    var buttonsWidth: CGFloat = 420
 
     var body: some View {
         VStack(spacing: 14) {
             ArtworkView(url: header.artworkUrl, cornerRadius: 12, placeholderSymbol: header.mediaType.librarySymbol)
                 .aspectRatio(1, contentMode: .fit)
-                .frame(maxWidth: 280)
+                .frame(maxWidth: min(300, buttonsWidth))
                 .shadow(color: .black.opacity(0.18), radius: 16, y: 8)
             VStack(spacing: 4) {
                 HStack(spacing: 6) {
@@ -204,7 +217,7 @@ private struct DetailHeader: View {
             .buttonStyle(.bordered)
             .controlSize(.large)
             .font(.headline)
-            .frame(maxWidth: 420)
+            .frame(maxWidth: buttonsWidth)
         }
         .frame(maxWidth: .infinity)
     }
@@ -283,8 +296,8 @@ private struct ArtistPage: View {
                         ForEach(model.state.topTracks.prefix(5), id: \.key) { track in
                             Button { model.screen.play(item: track) } label: { MediaRow(item: track) }
                                 .buttonStyle(.plain)
-                                .padding(.horizontal, 16)
-                            Divider().padding(.leading, 74)
+                                .padding(.horizontal, pageMargin)
+                            Divider().padding(.leading, pageMargin + 58)
                         }
                     }
                 }
@@ -303,7 +316,7 @@ private struct SectionTitle: View {
     var body: some View {
         Text(text)
             .font(.title2.weight(.bold))
-            .padding(.horizontal, 16)
+            .padding(.horizontal, pageMargin)
     }
 }
 
@@ -325,7 +338,7 @@ private struct AlbumRow: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, pageMargin)
                 }
             }
         }

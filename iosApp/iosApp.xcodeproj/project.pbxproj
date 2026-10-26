@@ -53,6 +53,7 @@
 		1D2AC19F8830ED7BABB46A85 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2765A4B92DC06F5B81FF89 /* HomeView.swift */; };
 		4052E22A84E12E7A3DE28AF8 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447C2097DBEA1E28ED63ADD5 /* SearchView.swift */; };
 		2C13D2009072346C2AB73C4F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A596CC88955A955988C05E5A /* SettingsView.swift */; };
+		7F36E300A7D5FD6B9C7CB158 /* Fold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EF335018E6E1B14ED3D692 /* Fold.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,6 +98,7 @@
 		7E2765A4B92DC06F5B81FF89 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		447C2097DBEA1E28ED63ADD5 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		A596CC88955A955988C05E5A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		50EF335018E6E1B14ED3D692 /* Fold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fold.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -225,6 +227,7 @@
 		58D86B2E3E89FCB8ECB14048 /* Native */ = {
 			isa = PBXGroup;
 			children = (
+				50EF335018E6E1B14ED3D692 /* Fold.swift */,
 				A596CC88955A955988C05E5A /* SettingsView.swift */,
 				447C2097DBEA1E28ED63ADD5 /* SearchView.swift */,
 				7E2765A4B92DC06F5B81FF89 /* HomeView.swift */,
@@ -391,6 +394,7 @@
 			files = (
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				7F36E300A7D5FD6B9C7CB158 /* Fold.swift in Sources */,
 				2C13D2009072346C2AB73C4F /* SettingsView.swift in Sources */,
 				4052E22A84E12E7A3DE28AF8 /* SearchView.swift in Sources */,
 				1D2AC19F8830ED7BABB46A85 /* HomeView.swift in Sources */,
