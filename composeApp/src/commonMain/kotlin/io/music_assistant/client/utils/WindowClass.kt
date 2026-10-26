@@ -2,8 +2,17 @@ package io.music_assistant.client.utils
 
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
+
+/**
+ * The width of the pane that holds this content, when a two-pane layout splits the window. Null
+ * when the content has the whole width of the window. [WindowClass] reads it, so a screen in a
+ * narrow pane gets its phone layout.
+ */
+val LocalPaneWidth = compositionLocalOf<Dp?> { null }
 
 object WindowClass {
     /**
@@ -22,8 +31,13 @@ object WindowClass {
         isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
     @Composable
+    fun isAtLeastExpanded(): Boolean =
+        isAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+
+    @Composable
     private fun isAtLeastBreakpoint(widthDp: Int): Boolean =
-        currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(widthDp)
+        LocalPaneWidth.current?.let { it >= widthDp.dp }
+            ?: currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(widthDp)
 }
 
 @Composable

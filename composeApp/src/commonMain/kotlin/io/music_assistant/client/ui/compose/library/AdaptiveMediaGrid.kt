@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -55,6 +54,8 @@ import io.music_assistant.client.ui.compose.common.items.ProgressActions
 import io.music_assistant.client.ui.compose.common.items.RadioWithMenu
 import io.music_assistant.client.ui.compose.common.items.TrackWithMenu
 import io.music_assistant.client.ui.compose.common.items.lazyListOccurrenceKeys
+import io.music_assistant.client.ui.compose.fold.FoldAwareGridCells
+import io.music_assistant.client.ui.compose.fold.rememberFoldTracker
 import io.music_assistant.client.ui.compose.grid.gridItemMinSize
 
 @Composable
@@ -99,10 +100,11 @@ fun AdaptiveMediaGrid(
         }
     }
 
+    val fold = rememberFoldTracker()
     LazyVerticalGrid(
-        modifier = modifier,
+        modifier = modifier.then(fold.modifier),
         state = gridState,
-        columns = GridCells.Adaptive(minSize = gridItemMinSize()),
+        columns = FoldAwareGridCells(minSize = gridItemMinSize(), evenColumns = fold.bookSpan() != null),
         contentPadding = contentPadding + PaddingValues(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
