@@ -34,7 +34,16 @@ struct ComposeView: UIViewControllerRepresentable {
 /// system color that the iOS Compose theme also uses.
 struct ContentView: View {
     @StateObject private var shell = TabShellModel()
-    @State private var composeFrame: CGRect = .zero
+    @State private var safeAreaFrame: CGRect = .zero
+    @State private var tabContentFrame: CGRect = .zero
+
+    /// The content area of the open tab, or the whole safe area while no tab bar shows. The tab
+    /// content keeps the inset of a hidden tab bar, so the expanded player uses the safe area,
+    /// as a full-screen player does.
+    private var composeFrame: CGRect {
+        guard let state = shell.state, state.active, !state.playerExpanded else { return safeAreaFrame }
+        return tabContentFrame
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -42,7 +51,7 @@ struct ContentView: View {
                 TabView(selection: tabSelection(state)) {
                     ForEach(Array(state.tabs.enumerated()), id: \.offset) { index, tab in
                         Tab(tab.title, systemImage: tab.symbol, value: index) {
-                            ComposeFrameReader(frame: $composeFrame)
+                            ComposeFrameReader(frame: $tabContentFrame)
                                 // The expanded player covers the content, as in Compose.
                                 .toolbarVisibility(state.playerExpanded ? .hidden : .automatic, for: .tabBar)
                         }
@@ -53,9 +62,10 @@ struct ContentView: View {
                 // get the safe area.
                 .ignoresSafeArea()
             } else {
-                ComposeFrameReader(frame: $composeFrame)
+                Color.clear
             }
         }
+        .background(ComposeFrameReader(frame: $safeAreaFrame))
         // An overlay, so the size of the Compose view never changes the layout that the readers
         // measure. As a sibling in the stack it fed back into the measured area, and on iPhone
         // Duo the two never settled.
@@ -84,34 +94,29 @@ struct ContentView: View {
     }
 }
 
-/// An empty view that reports its safe content area in the coordinates of the shell stack. Inside a tab, that is
-/// the area left by the tab bar or the sidebar. The keyboard is not part of it, because Compose
-/// moves the focused field above the keyboard itself.
+/// An empty view that reports its frame in the coordinates of the shell stack. It stays inside
+/// the safe area, so inside a tab that is the area left by the tab bar or the sidebar, and
+/// elsewhere the safe area of the window. The frame is already safe; its proxy still lists the
+/// insets of the container, so subtracting them would take them off twice. The keyboard is not
+/// part of it, because Compose moves the focused field above the keyboard itself.
 private struct ComposeFrameReader: View {
     static let space = "shell"
 
     @Binding var frame: CGRect
-    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         Color.clear
             .onGeometryChange(for: CGRect.self) { proxy in
-                safeFrame(proxy.frame(in: .named(Self.space)), proxy.safeAreaInsets)
+                // Whole points, so subpixel layout noise does not resize Compose.
+                let frame = proxy.frame(in: .named(Self.space))
+                return CGRect(
+                    x: frame.minX.rounded(),
+                    y: frame.minY.rounded(),
+                    width: frame.width.rounded(),
+                    height: frame.height.rounded()
+                )
             } action: { frame = $0 }
             .ignoresSafeArea(.keyboard)
-    }
-
-    /// The frame without the insets that are still in it, in case the parent ignores the safe area.
-    /// Rounded to whole points, so subpixel layout noise does not resize Compose.
-    private func safeFrame(_ frame: CGRect, _ insets: EdgeInsets) -> CGRect {
-        let left = layoutDirection == .leftToRight ? insets.leading : insets.trailing
-        let right = layoutDirection == .leftToRight ? insets.trailing : insets.leading
-        return CGRect(
-            x: (frame.minX + left).rounded(),
-            y: (frame.minY + insets.top).rounded(),
-            width: max(0, frame.width - left - right).rounded(),
-            height: max(0, frame.height - insets.top - insets.bottom).rounded()
-        )
     }
 }
 
