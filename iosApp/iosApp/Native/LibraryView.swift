@@ -27,14 +27,7 @@ struct LibraryView: View {
             }
             .listStyle(.plain)
             .navigationTitle("Library")
-            .navigationDestination(for: LibraryRoute.self) { route in
-                switch route {
-                case .list(let mediaType):
-                    LibraryListView(mediaType: mediaType, bottomInset: bottomInset)
-                case .item:
-                    ItemDetailView(route: route, bottomInset: bottomInset)
-                }
-            }
+            .nativeDestinations(bottomInset: bottomInset)
             .safeAreaPadding(.bottom, bottomInset)
         }
     }

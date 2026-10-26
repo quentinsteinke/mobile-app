@@ -52,7 +52,7 @@ struct ContentView: View {
     }
 
     /// The tabs that SwiftUI draws natively. The others show the Compose screen.
-    private static let nativeTabs: Set<String> = ["library"]
+    private static let nativeTabs: Set<String> = ["home", "library", "search"]
 
     private var showsNativeTab: Bool {
         guard let state = shell.state, state.active, Int(state.selected) < state.tabs.count else { return false }
@@ -68,7 +68,9 @@ struct ContentView: View {
     @ViewBuilder
     private func nativeTab(_ key: String) -> some View {
         switch key {
+        case "home": HomeView(bottomInset: miniPlayerInset)
         case "library": LibraryView(bottomInset: miniPlayerInset)
+        case "search": SearchView(bottomInset: miniPlayerInset)
         default: EmptyView()
         }
     }

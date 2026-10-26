@@ -148,3 +148,55 @@ func formatTotalDuration(_ seconds: Double) -> String {
     if minutes < 60 { return "\(minutes) min" }
     return "\(minutes / 60) hr \(minutes % 60) min"
 }
+
+@MainActor
+final class HomeModel: ObservableObject {
+    @Published private(set) var state: NativeHomeState
+    let screen = NativeHome()
+    private var task: Task<Void, Never>?
+
+    init() {
+        state = screen.state.value
+        task = Task { [weak self, screen] in
+            for await value in screen.state { self?.state = value }
+        }
+    }
+
+    deinit {
+        task?.cancel()
+        screen.close()
+    }
+}
+
+@MainActor
+final class SearchModel: ObservableObject {
+    @Published private(set) var state: NativeSearchState
+    let screen = NativeSearch()
+    private var task: Task<Void, Never>?
+
+    init() {
+        state = screen.state.value
+        task = Task { [weak self, screen] in
+            for await value in screen.state { self?.state = value }
+        }
+    }
+
+    deinit {
+        task?.cancel()
+        screen.close()
+    }
+}
+
+extension View {
+    /// The detail pages that every native tab pushes: library lists and item pages.
+    func nativeDestinations(bottomInset: CGFloat) -> some View {
+        navigationDestination(for: LibraryRoute.self) { route in
+            switch route {
+            case .list(let mediaType):
+                LibraryListView(mediaType: mediaType, bottomInset: bottomInset)
+            case .item:
+                ItemDetailView(route: route, bottomInset: bottomInset)
+            }
+        }
+    }
+}

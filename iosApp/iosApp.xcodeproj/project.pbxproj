@@ -50,6 +50,8 @@
 		C8D4A47CCE1EBB1060FF226E /* MediaRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84BC654BD2CCCE99DB0E5D1F /* MediaRows.swift */; };
 		AC6F8A2CFB596B41CF911854 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32BE9104E6E0965994C1E330 /* LibraryView.swift */; };
 		C3F6D8ACC15F686DE6F6D640 /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CC222E29D22CA25FF7E1595 /* ItemDetailView.swift */; };
+		1D2AC19F8830ED7BABB46A85 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E2765A4B92DC06F5B81FF89 /* HomeView.swift */; };
+		4052E22A84E12E7A3DE28AF8 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447C2097DBEA1E28ED63ADD5 /* SearchView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -91,6 +93,8 @@
 		84BC654BD2CCCE99DB0E5D1F /* MediaRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaRows.swift; sourceTree = "<group>"; };
 		32BE9104E6E0965994C1E330 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		7CC222E29D22CA25FF7E1595 /* ItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailView.swift; sourceTree = "<group>"; };
+		7E2765A4B92DC06F5B81FF89 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		447C2097DBEA1E28ED63ADD5 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -219,6 +223,8 @@
 		58D86B2E3E89FCB8ECB14048 /* Native */ = {
 			isa = PBXGroup;
 			children = (
+				447C2097DBEA1E28ED63ADD5 /* SearchView.swift */,
+				7E2765A4B92DC06F5B81FF89 /* HomeView.swift */,
 				7CC222E29D22CA25FF7E1595 /* ItemDetailView.swift */,
 				32BE9104E6E0965994C1E330 /* LibraryView.swift */,
 				84BC654BD2CCCE99DB0E5D1F /* MediaRows.swift */,
@@ -382,6 +388,8 @@
 			files = (
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				4052E22A84E12E7A3DE28AF8 /* SearchView.swift in Sources */,
+				1D2AC19F8830ED7BABB46A85 /* HomeView.swift in Sources */,
 				C3F6D8ACC15F686DE6F6D640 /* ItemDetailView.swift in Sources */,
 				AC6F8A2CFB596B41CF911854 /* LibraryView.swift in Sources */,
 				C8D4A47CCE1EBB1060FF226E /* MediaRows.swift in Sources */,

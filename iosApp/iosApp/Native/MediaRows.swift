@@ -6,11 +6,13 @@ struct MediaTile: View {
     let item: NativeMediaItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ArtworkView(url: item.artworkUrl, cornerRadius: 10, placeholderSymbol: item.mediaType.librarySymbol)
+        let round = item.mediaType == .artist
+        VStack(alignment: round ? .center : .leading, spacing: 6) {
+            ArtworkView(url: item.artworkUrl, cornerRadius: round ? 0 : 10, placeholderSymbol: item.mediaType.librarySymbol)
                 .aspectRatio(1, contentMode: .fit)
+                .clipShape(round ? AnyShape(Circle()) : AnyShape(Rectangle()))
                 .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: round ? .center : .leading, spacing: 1) {
                 HStack(spacing: 4) {
                     Text(item.title)
                         .font(.subheadline.weight(.medium))
