@@ -5,6 +5,9 @@ import ComposeApp
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         let controller = MainViewControllerKt.MainViewController()
+        // Compose moves its content up above the keyboard. Clip it to the view, so it does
+        // not slide under the status bar.
+        controller.view.clipsToBounds = true
         FoldStateBridge.attach(to: controller.view)
         return controller
     }
@@ -49,13 +52,19 @@ struct ContentView: View {
             } else {
                 ComposeFrameReader(frame: $composeFrame)
             }
-
+        }
+        // An overlay, so the size of the Compose view never changes the layout that the readers
+        // measure. As a sibling in the stack it fed back into the measured area, and on iPhone
+        // Duo the two never settled.
+        .overlay(alignment: .topLeading) {
             ComposeView()
                 .frame(width: composeFrame.width, height: composeFrame.height)
+                .clipped()
                 .offset(x: composeFrame.minX, y: composeFrame.minY)
         }
-        // The stack fills the window, so its coordinates are window coordinates, the space
-        // that ComposeFrameReader reports in.
+        // The stack fills the window. ComposeFrameReader reports in its coordinate space, so the
+        // offset places the Compose view exactly over the reported area.
+        .coordinateSpace(.named(ComposeFrameReader.space))
         .ignoresSafeArea()
         .background(Color(uiColor: .systemBackground))
     }
@@ -70,30 +79,33 @@ struct ContentView: View {
     }
 }
 
-/// An empty view that reports its safe content area in window coordinates. Inside a tab, that is
+/// An empty view that reports its safe content area in the coordinates of the shell stack. Inside a tab, that is
 /// the area left by the tab bar or the sidebar. The keyboard is not part of it, because Compose
 /// moves the focused field above the keyboard itself.
 private struct ComposeFrameReader: View {
+    static let space = "shell"
+
     @Binding var frame: CGRect
     @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         Color.clear
             .onGeometryChange(for: CGRect.self) { proxy in
-                safeFrame(proxy.frame(in: .global), proxy.safeAreaInsets)
+                safeFrame(proxy.frame(in: .named(Self.space)), proxy.safeAreaInsets)
             } action: { frame = $0 }
             .ignoresSafeArea(.keyboard)
     }
 
     /// The frame without the insets that are still in it, in case the parent ignores the safe area.
+    /// Rounded to whole points, so subpixel layout noise does not resize Compose.
     private func safeFrame(_ frame: CGRect, _ insets: EdgeInsets) -> CGRect {
         let left = layoutDirection == .leftToRight ? insets.leading : insets.trailing
         let right = layoutDirection == .leftToRight ? insets.trailing : insets.leading
         return CGRect(
-            x: frame.minX + left,
-            y: frame.minY + insets.top,
-            width: max(0, frame.width - left - right),
-            height: max(0, frame.height - insets.top - insets.bottom)
+            x: (frame.minX + left).rounded(),
+            y: (frame.minY + insets.top).rounded(),
+            width: max(0, frame.width - left - right).rounded(),
+            height: max(0, frame.height - insets.top - insets.bottom).rounded()
         )
     }
 }
