@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 /**
  * The iOS look of the shared screens: system colors in light and dark, SF Pro in the HIG type
  * scale, a highlight instead of the Material ripple, rounded filled text fields without an
- * indicator line, and SF Symbols for the icons that have one.
+ * indicator line, SF Symbols for the icons that have one, and no all-caps buttons.
  */
 object IosPlatformStyle : PlatformStyle {
     @Composable
@@ -63,6 +63,8 @@ object IosPlatformStyle : PlatformStyle {
     override val textFieldShape: Shape = RoundedCornerShape(10.dp)
 
     override val showsExitButton: Boolean = false
+
+    override val sentenceCaseButtons: Boolean = true
 }
 
 /** iOS corner radii: menus and small controls, cells and cards, then sheets and large cards. */

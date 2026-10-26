@@ -75,6 +75,7 @@ import io.music_assistant.client.ui.compose.common.items.DISABLED_ITEM_ALPHA
 import io.music_assistant.client.ui.compose.common.items.localizedSubtitle
 import io.music_assistant.client.ui.compose.common.painters.rememberPlaceholderPainter
 import io.music_assistant.client.ui.contentColorByLuminance
+import io.music_assistant.client.ui.theme.platformButtonLabel
 import io.music_assistant.client.utils.conditional
 import io.music_assistant.client.utils.formatDuration
 import kotlinx.coroutines.flow.Flow
@@ -257,7 +258,7 @@ fun Queue(
                         OutlinedButton(
                             onClick = onGoToLibrary,
                         ) {
-                            Text(stringResource(Res.string.queue_browse_library))
+                            Text(platformButtonLabel(stringResource(Res.string.queue_browse_library)))
                         }
                     }
                 } else {
