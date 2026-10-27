@@ -1,6 +1,13 @@
 import SwiftUI
 import ComposeApp
 
+/// A library page that a deep link opens in the Library tab.
+@MainActor
+final class LibraryNavigator: ObservableObject {
+    static let shared = LibraryNavigator()
+    @Published var pending: LibraryRoute?
+}
+
 /// The native Library tab: the categories, then a list per category and the detail pages. A wide
 /// window (the unfolded iPhone Duo) keeps the categories in a sidebar beside the open category,
 /// and in book posture the sidebar ends at the fold.
@@ -14,6 +21,7 @@ struct LibraryView: View {
     @State private var fold: FoldDivision?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var editsCategories = false
+    @ObservedObject private var navigator = LibraryNavigator.shared
 
     /// The route of each visible category, in the user's order.
     private var routes: [LibraryRoute] {
@@ -33,6 +41,19 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $editsCategories) {
             CategoriesEditor(choices: model.choices) { model.screen.save(choices: $0) }
+        }
+        .onAppear(perform: openPending)
+        .onChange(of: navigator.pending) { _, _ in openPending() }
+    }
+
+    /// Opens the category that a deep link asked for.
+    private func openPending() {
+        guard let route = navigator.pending else { return }
+        navigator.pending = nil
+        if sizeClass == .regular {
+            selected = route
+        } else {
+            path = [route]
         }
     }
 

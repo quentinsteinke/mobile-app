@@ -2,6 +2,7 @@ package io.music_assistant.client.ui.compose.nav
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import io.music_assistant.client.data.model.client.MediaType
 
 /**
  * Tabs that the platform draws itself around the shared screens, as the SwiftUI tab bar and
@@ -18,6 +19,15 @@ interface NativeTabShell {
     /** Shows [tabs] in the native chrome while the calling screen is composed. */
     @Composable
     fun Publish(tabs: List<NavigationItem>, playerExpanded: Boolean)
+
+    /** Opens the native Now Playing, for a deep link, when [drawsPlayer]. */
+    fun expandPlayer() {}
+
+    /**
+     * Opens the library list of [mediaType] in a native Library tab, for a deep link. Returns
+     * false when the Library tab is not native, so the main screen pushes its own list.
+     */
+    fun openLibraryList(mediaType: MediaType): Boolean = false
 }
 
 val LocalNativeTabShell = staticCompositionLocalOf<NativeTabShell?> { null }

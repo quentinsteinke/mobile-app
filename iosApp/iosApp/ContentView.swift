@@ -361,8 +361,18 @@ private final class TabShellModel: ObservableObject {
     /// The top-level settings screen is on (not connected, or not signed in).
     @Published private(set) var settingsShowing = false
     private var subscriptions: [ComposeApp.Cancellable] = []
+    /// Deep links for the native screens (`IosTabShell.requests`).
+    private var requests: Task<Void, Never>?
 
     init() {
+        requests = Task {
+            for await request in IosTabShell.shared.requests {
+                switch request.kind {
+                case .player: PlayerModel.shared.isNowPlayingPresented = true
+                case .libraryList: request.mediaType.map { LibraryNavigator.shared.pending = .list($0) }
+                }
+            }
+        }
         subscriptions = [
             KmpHelper.shared.observeTabShell { [weak self] state in self?.state = state },
             KmpHelper.shared.observeSettingsShowing { [weak self] showing in self?.settingsShowing = showing.boolValue },
@@ -371,6 +381,7 @@ private final class TabShellModel: ObservableObject {
 
     deinit {
         subscriptions.forEach { $0.cancel() }
+        requests?.cancel()
     }
 }
 

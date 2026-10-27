@@ -205,6 +205,7 @@ fun MainNavigationRoot(
     // Main→Settings→Main churn — never consumes it; only the authenticated
     // instance that stays on screen applies and clears it.
     val connectionState by homeScreenViewModel.connectionState.collectAsStateWithLifecycle()
+    val nativeTabShell = LocalNativeTabShell.current
     val pendingDeepLink by deepLinkBus.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingDeepLink, connectionState) {
         val dest = pendingDeepLink ?: return@LaunchedEffect
@@ -221,7 +222,9 @@ fun MainNavigationRoot(
                 multiBackStack.currentBackStack = 1
                 multiBackStack.resetCurrentBackStack()
                 // /library/<category> → push the category list onto the Library tab.
-                dest.mediaType?.let { multiBackStack.add(MainNav.LibraryList(it)) }
+                dest.mediaType
+                    ?.takeUnless { nativeTabShell?.openLibraryList(it) == true }
+                    ?.let { multiBackStack.add(MainNav.LibraryList(it)) }
             }
 
             DeepLinkDestination.Search -> {
@@ -235,7 +238,7 @@ fun MainNavigationRoot(
                 // renders its own empty state if no player is present. A named
                 // player is selected in the ViewModel scope: consume() below
                 // restarts this effect, which would cancel the lookup.
-                playerExpanded = true
+                nativeTabShell?.takeIf { it.drawsPlayer }?.expandPlayer() ?: run { playerExpanded = true }
                 dest.playerIdOrName?.let(homeScreenViewModel::selectPlayerByIdOrName)
             }
         }
@@ -302,7 +305,6 @@ fun MainNavigationRoot(
     val rootScreenEditing = homeScreenState.value?.editMode == true ||
         libraryScreenState.value?.editMode == true
 
-    val nativeTabShell = LocalNativeTabShell.current
     nativeTabShell?.Publish(navigationItems, playerExpanded)
 
     Box(modifier = Modifier.fillMaxSize()) {

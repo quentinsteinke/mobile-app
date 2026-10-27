@@ -4,9 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import io.music_assistant.client.data.model.client.MediaType
 import io.music_assistant.client.ui.theme.sfSymbolName
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
@@ -67,10 +71,27 @@ object IosTabShell : NativeTabShell {
         }
     }
 
+    private val mutableRequests = MutableSharedFlow<ShellRequest>(extraBufferCapacity = 4)
+
+    /** What deep links ask of the native screens. */
+    val requests: SharedFlow<ShellRequest> = mutableRequests.asSharedFlow()
+
+    override fun expandPlayer() {
+        mutableRequests.tryEmit(ShellRequest(ShellRequest.Kind.PLAYER, null))
+    }
+
+    override fun openLibraryList(mediaType: MediaType): Boolean =
+        mutableRequests.tryEmit(ShellRequest(ShellRequest.Kind.LIBRARY_LIST, mediaType))
+
     /** A tap on tab [index]. A tap on the open tab returns it to its root, as in Compose. */
     fun select(index: Int) {
         tabs.getOrNull(index)?.onClick?.invoke()
     }
+}
+
+/** A deep link for the native screens: open Now Playing, or a library list of [mediaType]. */
+data class ShellRequest(val kind: Kind, val mediaType: MediaType?) {
+    enum class Kind { PLAYER, LIBRARY_LIST }
 }
 
 private val inactive = TabShellState(active = false, tabs = emptyList(), selected = 0, playerExpanded = false)
