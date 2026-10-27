@@ -55,6 +55,7 @@
 		2C13D2009072346C2AB73C4F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A596CC88955A955988C05E5A /* SettingsView.swift */; };
 		7F36E300A7D5FD6B9C7CB158 /* Fold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EF335018E6E1B14ED3D692 /* Fold.swift */; };
 		2655CE826364AEFC4E0C765F /* ItemActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20806BCA08A5E9F72C75204 /* ItemActions.swift */; };
+		CC4E616160189C6429CF7A4D /* PlayerExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C43E9B8954C42010B2F08B /* PlayerExtras.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,6 +102,7 @@
 		A596CC88955A955988C05E5A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		50EF335018E6E1B14ED3D692 /* Fold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fold.swift; sourceTree = "<group>"; };
 		C20806BCA08A5E9F72C75204 /* ItemActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemActions.swift; sourceTree = "<group>"; };
+		15C43E9B8954C42010B2F08B /* PlayerExtras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerExtras.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -229,6 +231,7 @@
 		58D86B2E3E89FCB8ECB14048 /* Native */ = {
 			isa = PBXGroup;
 			children = (
+				15C43E9B8954C42010B2F08B /* PlayerExtras.swift */,
 				C20806BCA08A5E9F72C75204 /* ItemActions.swift */,
 				50EF335018E6E1B14ED3D692 /* Fold.swift */,
 				A596CC88955A955988C05E5A /* SettingsView.swift */,
@@ -397,6 +400,7 @@
 			files = (
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				CC4E616160189C6429CF7A4D /* PlayerExtras.swift in Sources */,
 				2655CE826364AEFC4E0C765F /* ItemActions.swift in Sources */,
 				7F36E300A7D5FD6B9C7CB158 /* Fold.swift in Sources */,
 				2C13D2009072346C2AB73C4F /* SettingsView.swift in Sources */,

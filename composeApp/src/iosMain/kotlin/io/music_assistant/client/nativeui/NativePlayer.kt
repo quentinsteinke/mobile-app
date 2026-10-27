@@ -2,18 +2,22 @@ package io.music_assistant.client.nativeui
 
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.ImageType
+import io.music_assistant.client.data.model.client.Lyrics
 import io.music_assistant.client.data.model.client.MediaType
 import io.music_assistant.client.data.model.client.PlayerData
+import io.music_assistant.client.data.model.client.QueueOption
 import io.music_assistant.client.data.model.client.QueueTrack
 import io.music_assistant.client.data.model.client.RepeatMode
 import io.music_assistant.client.data.model.client.items.AppMediaItem
 import io.music_assistant.client.data.model.client.items.AudioSource
 import io.music_assistant.client.data.model.client.items.Audiobook
 import io.music_assistant.client.data.model.client.items.LongFormSeekDefaults
+import io.music_assistant.client.data.model.client.items.Track
 import io.music_assistant.client.data.model.client.items.canBeFavorited
 import io.music_assistant.client.data.model.client.items.image
 import io.music_assistant.client.data.model.client.items.isLongFormSpokenContent
 import io.music_assistant.client.data.model.client.navigationChapters
+import io.music_assistant.client.data.play.PlayMode
 import io.music_assistant.client.ui.compose.common.action.PlayerAction
 import io.music_assistant.client.ui.compose.common.action.QueueAction
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
@@ -85,6 +89,60 @@ data class NativeNowPlaying(
     val favorite: Boolean?,
     val canFavorite: Boolean,
     val queue: List<NativeQueueItem>,
+    val extras: NativePlayerExtras,
+)
+
+/** The lyrics of the current track: timed lines, or a plain text when they are not synced. */
+data class NativeLyrics(val lines: List<NativeLyricLine>, val plainText: String?)
+
+data class NativeLyricLine(val timeMs: Long, val text: String)
+
+/** A player that can join the selected player's group, with its own volume. */
+data class NativeGroupMember(
+    val playerId: String,
+    val name: String,
+    val isBound: Boolean,
+    val isManageable: Boolean,
+    val volume: Float?,
+    val canSetVolume: Boolean,
+    val isMuted: Boolean,
+)
+
+/** The group of the selected player, as the Compose group dialog shows it. */
+data class NativeGroup(
+    /** The player leads a group or is a group player: the group volume applies. */
+    val hasGroupVolume: Boolean,
+    val groupVolume: Float?,
+    val groupMuted: Boolean,
+    /** The selected player's own volume. */
+    val ownVolume: Float?,
+    val canSetOwnVolume: Boolean,
+    val ownMuted: Boolean,
+    val canMute: Boolean,
+    val canLeave: Boolean,
+    val members: List<NativeGroupMember>,
+)
+
+/** The options around the current item: timers, queue modes, lyrics, links and the group. */
+data class NativePlayerExtras(
+    val sleepTimerSupported: Boolean,
+    /** The unix time (seconds) when the sleep timer stops the player, or null. */
+    val sleepTimerExpiresAt: Double?,
+    /** Null when the server has no autoplay. */
+    val autoplay: Boolean?,
+    val canToggleAutoplay: Boolean,
+    /** Null when the server has no crossfade setting. */
+    val crossfade: Boolean?,
+    val canToggleCrossfade: Boolean,
+    /** Null when the content has no speed control. */
+    val playbackSpeed: Double?,
+    val lyrics: NativeLyrics?,
+    /** The current item, for its long-press menu (favorite, add to playlist, start radio...). */
+    val item: NativeMediaItem?,
+    val canStartRadio: Boolean,
+    val album: NativeMediaItem?,
+    val artists: List<NativeMediaItem>,
+    val group: NativeGroup,
 )
 
 /** The state of the native player UI. [current] is null while no player is available. */
@@ -110,7 +168,9 @@ object NativePlayer : KoinComponent {
         viewModel.playersState,
         viewModel.chapterProgressEnabled,
         dataSource.grantedScopes,
-    ) { players, chapterProgress, scopes ->
+        viewModel.sleepTimerSupported,
+        viewModel.leaderLeaveSupported,
+    ) { players, chapterProgress, scopes, sleepTimer, leaderLeave ->
         val data = players as? HomeScreenViewModel.PlayersState.Data
         val current = data?.selectedPlayer
         selected = current
@@ -124,7 +184,7 @@ object NativePlayer : KoinComponent {
                     isLocal = it.isLocal,
                 )
             },
-            current = current?.toNowPlaying(chapterProgress, scopes.canEditLibrary),
+            current = current?.toNowPlaying(chapterProgress, scopes.canEditLibrary, sleepTimer, leaderLeave),
         )
     }.stateIn(scope, SharingStarted.Eagerly, NativePlayerState(emptyList(), null))
 
@@ -179,6 +239,57 @@ object NativePlayer : KoinComponent {
         actions.onFavoriteChange(item, if (item.favorite == true) null else true)
     }
 
+    /** Stops the player in [seconds]. */
+    fun setSleepTimer(seconds: Int) {
+        selected?.let { viewModel.setSleepTimer(it.playerId, seconds) }
+    }
+
+    fun clearSleepTimer() {
+        selected?.let { viewModel.clearSleepTimer(it.playerId) }
+    }
+
+    fun toggleAutoplay() = act { data ->
+        data.queueInfo?.autoPlayEnabled?.let { PlayerAction.ToggleDontStopTheMusic(current = it) }
+    }
+
+    fun toggleCrossfade() = act { data ->
+        data.queueInfo?.crossfadeEnabled?.let { PlayerAction.ToggleCrossfade(current = it) }
+    }
+
+    fun setPlaybackSpeed(speed: Double) = act { PlayerAction.SetPlaybackSpeed(speed) }
+
+    /** Plays an endless mix based on the current item. */
+    fun startRadio() {
+        val data = selected ?: return
+        val item = data.queueInfo?.currentItem?.track as? AppMediaItem ?: return
+        viewModel.playOnQueue(data.queueOrPlayerId, item, PlayMode(QueueOption.REPLACE, endlessMix = true))
+    }
+
+    /** Adds [playerId] to the selected player's group, or takes it out. */
+    fun setGroupMember(playerId: String, bound: Boolean) = act {
+        PlayerAction.GroupManage(
+            toAdd = listOf(playerId).takeIf { bound },
+            toRemove = listOf(playerId).takeIf { !bound },
+        )
+    }
+
+    fun leaveGroup() = act { PlayerAction.LeaveGroup }
+
+    /** The volume of the whole group (0 to 100). */
+    fun setGroupVolume(level: Double) = act { PlayerAction.GroupVolumeSet(level) }
+
+    fun toggleGroupMute() = act { data -> PlayerAction.GroupToggleMute(data.player.groupVolumeMuted) }
+
+    /** The selected player's own volume, inside its group. */
+    fun setOwnVolume(level: Double) = act { PlayerAction.VolumeSet(level) }
+
+    fun toggleOwnMute() = act { data -> PlayerAction.ToggleMute(data.player.volumeMuted) }
+
+    fun setMemberVolume(playerId: String, level: Double) = viewModel.playerAction(playerId, PlayerAction.VolumeSet(level))
+
+    fun toggleMemberMute(playerId: String, muted: Boolean) =
+        viewModel.playerAction(playerId, PlayerAction.ToggleMute(isMutedNow = muted))
+
     fun playQueueItem(queueItemId: String) = queue { QueueAction.PlayQueueItem(it, queueItemId) }
 
     fun removeQueueItem(queueItemId: String) = queue { QueueAction.RemoveItems(it, listOf(queueItemId)) }
@@ -200,7 +311,12 @@ object NativePlayer : KoinComponent {
 
 private val PlayerData.isGroupBound: Boolean get() = childrenBinds.any { it.isBound }
 
-private fun PlayerData.toNowPlaying(chapterProgress: Boolean, canEditLibrary: Boolean): NativeNowPlaying {
+private fun PlayerData.toNowPlaying(
+    chapterProgress: Boolean,
+    canEditLibrary: Boolean,
+    sleepTimerSupported: Boolean,
+    leaderLeaveSupported: Boolean,
+): NativeNowPlaying {
     val media = player.currentMedia
     val queue = queueInfo
     val current = queue?.currentItem
@@ -249,8 +365,50 @@ private fun PlayerData.toNowPlaying(chapterProgress: Boolean, canEditLibrary: Bo
         favorite = item?.favorite,
         canFavorite = canEditLibrary && item?.canBeFavorited == true,
         queue = items.map { it.toNative(isCurrent = it.id == current?.id) },
+        extras = NativePlayerExtras(
+            sleepTimerSupported = sleepTimerSupported,
+            sleepTimerExpiresAt = player.sleepTimerExpiresAt,
+            autoplay = queue?.autoPlayEnabled?.let { it || queue.isDynamicPlaylist },
+            canToggleAutoplay = queue?.isDynamicPlaylist == false && current != null,
+            crossfade = queue?.crossfadeEnabled,
+            canToggleCrossfade = current != null,
+            playbackSpeed = queue?.playbackSpeed,
+            lyrics = (track as? Track)?.lyrics?.toNative(),
+            item = item?.toNative(),
+            canStartRadio = enabled && track?.canStartEndlessMix == true,
+            album = (track as? Track)?.album?.toNative(),
+            artists = (track as? Track)?.artists.orEmpty().map { it.toNative() },
+            group = toNativeGroup(leaderLeaveSupported),
+        ),
     )
 }
+
+private fun Lyrics.toNative(): NativeLyrics = when (this) {
+    is Lyrics.Synced -> NativeLyrics(lines.map { NativeLyricLine(it.timeMs, it.text) }, null)
+    is Lyrics.Plain -> NativeLyrics(emptyList(), text)
+}
+
+private fun PlayerData.toNativeGroup(leaderLeaveSupported: Boolean) = NativeGroup(
+    hasGroupVolume = player.isGrouped || player.isGroup,
+    groupVolume = player.groupVolume,
+    groupMuted = player.groupVolumeMuted,
+    ownVolume = player.volumeLevel,
+    canSetOwnVolume = player.isVolumeSliderAccessible,
+    ownMuted = player.volumeMuted,
+    canMute = player.canMute,
+    canLeave = leaderLeaveSupported && player.canLeaveOwnGroup,
+    members = childrenBinds.sortedByDescending { it.isBound }.map {
+        NativeGroupMember(
+            playerId = it.id,
+            name = it.name,
+            isBound = it.isBound,
+            isManageable = it.isManageable,
+            volume = it.volume,
+            canSetVolume = it.volumeSliderAccessible && it.volume != null && it.isBound,
+            isMuted = it.isMuted == true,
+        )
+    },
+)
 
 private fun QueueTrack.toNative(isCurrent: Boolean) = NativeQueueItem(
     queueItemId = id,

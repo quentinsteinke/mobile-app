@@ -8,7 +8,9 @@ struct NowPlayingView: View {
     @ObservedObject var model: PlayerModel
     /// Full screen (the unfolded iPhone Duo) rather than a sheet, so it needs its own close button.
     var fullScreen = false
-    @State private var showsQueue = false
+    @State private var panel: NowPlayingPanel = .artwork
+    @State private var route: PresentedRoute?
+    @State private var showsGroup = false
     @State private var fold: FoldDivision?
     @Environment(\.dismiss) private var dismiss
 
@@ -50,6 +52,11 @@ struct NowPlayingView: View {
         .tint(.white)
         .presentationDragIndicator(.visible)
         .presentationBackground(.black)
+        // Outside the dark scheme and the white tint of the player, so these screens look as
+        // they do elsewhere.
+        .sheet(item: $route) { PresentedRouteSheet(route: $0.route) }
+        .sheet(isPresented: $showsGroup) { GroupSheet(model: model) }
+        .itemActionPresentations()
     }
 
     /// Drags the artwork down to close, as the sheet does.
@@ -63,10 +70,13 @@ struct NowPlayingView: View {
 
     private func tallLayout(_ nowPlaying: NativeNowPlaying) -> some View {
         VStack(spacing: 20) {
-            if showsQueue {
+            switch panel {
+            case .queue:
                 QueueView(nowPlaying: nowPlaying)
                     .transition(.opacity)
-            } else {
+            case .lyrics:
+                lyricsPanel(nowPlaying)
+            case .artwork:
                 Spacer(minLength: 8)
                 ArtworkCard(nowPlaying: nowPlaying)
                     .frame(maxWidth: 420)
@@ -74,13 +84,29 @@ struct NowPlayingView: View {
                     .transition(.opacity)
                 Spacer(minLength: 8)
             }
-            ControlsColumn(model: model, nowPlaying: nowPlaying, showsQueue: $showsQueue)
+            controls(nowPlaying)
                 .frame(maxWidth: 460)
         }
         .padding(.horizontal, 24)
         .padding(.top, fullScreen ? 64 : 28)
         .padding(.bottom, 12)
-        .animation(.smooth, value: showsQueue)
+        .animation(.smooth, value: panel)
+    }
+
+    @ViewBuilder
+    private func lyricsPanel(_ nowPlaying: NativeNowPlaying) -> some View {
+        if let lyrics = nowPlaying.extras.lyrics {
+            LyricsPanel(lyrics: lyrics, position: model.position)
+                .padding(.top, fullScreen ? 40 : 0)
+                .transition(.opacity)
+        } else {
+            ArtworkCard(nowPlaying: nowPlaying)
+                .onAppear { panel = .artwork }
+        }
+    }
+
+    private func controls(_ nowPlaying: NativeNowPlaying) -> some View {
+        ControlsColumn(model: model, nowPlaying: nowPlaying, panel: $panel, route: $route, showsGroup: $showsGroup)
     }
 
     /// The artwork (or the queue) beside the controls on a wide window and on each side of the
@@ -88,10 +114,13 @@ struct NowPlayingView: View {
     private func splitLayout(_ nowPlaying: NativeNowPlaying) -> some View {
         FoldSplit(fallback: .horizontal) {
             Group {
-                if showsQueue {
+                switch panel {
+                case .queue:
                     QueueView(nowPlaying: nowPlaying)
                         .padding(.top, fullScreen ? 52 : 0)
-                } else {
+                case .lyrics:
+                    lyricsPanel(nowPlaying)
+                case .artwork:
                     ArtworkCard(nowPlaying: nowPlaying)
                         .gesture(closeDrag)
                 }
@@ -100,13 +129,13 @@ struct NowPlayingView: View {
             .padding(24)
             .transition(.opacity)
         } second: {
-            ControlsColumn(model: model, nowPlaying: nowPlaying, showsQueue: $showsQueue)
+            controls(nowPlaying)
                 .frame(maxWidth: 460)
                 .padding(.horizontal, 24)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .padding(.vertical, 12)
-        .animation(.smooth, value: showsQueue)
+        .animation(.smooth, value: panel)
     }
 }
 
@@ -127,7 +156,9 @@ private struct ArtworkCard: View {
 private struct ControlsColumn: View {
     @ObservedObject var model: PlayerModel
     let nowPlaying: NativeNowPlaying
-    @Binding var showsQueue: Bool
+    @Binding var panel: NowPlayingPanel
+    @Binding var route: PresentedRoute?
+    @Binding var showsGroup: Bool
 
     var body: some View {
         VStack(spacing: 22) {
@@ -137,7 +168,7 @@ private struct ControlsColumn: View {
             if nowPlaying.canSetVolume, let volume = nowPlaying.volume?.doubleValue {
                 VolumeRow(nowPlaying: nowPlaying, volume: volume)
             }
-            BottomRow(players: model.state.players, nowPlaying: nowPlaying, showsQueue: $showsQueue)
+            BottomRow(players: model.state.players, nowPlaying: nowPlaying, panel: $panel, route: $route, showsGroup: $showsGroup)
         }
     }
 }
@@ -355,7 +386,11 @@ private struct VolumeRow: View {
 private struct BottomRow: View {
     let players: [NativePlayerChoice]
     let nowPlaying: NativeNowPlaying
-    @Binding var showsQueue: Bool
+    @Binding var panel: NowPlayingPanel
+    @Binding var route: PresentedRoute?
+    @Binding var showsGroup: Bool
+
+    private var showsQueue: Bool { panel == .queue }
 
     var body: some View {
         HStack {
@@ -375,6 +410,9 @@ private struct BottomRow: View {
                         }
                     }
                 }
+                if !nowPlaying.extras.group.members.isEmpty {
+                    Button("Group Speakers…", systemImage: "hifispeaker.2") { showsGroup = true }
+                }
             } label: {
                 Label(nowPlaying.playerName, systemImage: nowPlaying.isLocal ? "iphone" : "hifispeaker.fill")
                     .font(.subheadline.weight(.semibold))
@@ -383,9 +421,11 @@ private struct BottomRow: View {
                     .padding(.vertical, 9)
                     .background(.white.opacity(0.12), in: Capsule())
             }
+            .menuOrder(.fixed)
             Spacer()
+            PlayerOptionsMenu(nowPlaying: nowPlaying, panel: $panel, route: $route, showsGroup: $showsGroup)
             Button {
-                showsQueue.toggle()
+                panel = showsQueue ? .artwork : .queue
             } label: {
                 Image(systemName: "list.bullet")
                     .font(.system(size: 18, weight: .semibold))

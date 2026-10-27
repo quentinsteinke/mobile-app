@@ -210,7 +210,7 @@ struct ContentView: View {
         // The stack and the overlay stay inside the safe area: where a view ignores it, SwiftUI
         // hands the window insets to the hosted Compose view, and Compose would pad them a
         // second time.
-        .itemActionPresentations()
+        .itemActionPresentations(isActive: !player.isNowPlayingPresented)
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
     }
 

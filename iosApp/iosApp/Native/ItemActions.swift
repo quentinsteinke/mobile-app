@@ -48,12 +48,16 @@ struct MediaContextMenu: View {
     var inEditablePlaylist = false
     var playFromHere: (() -> Void)?
     var removeFromPlaylist: (() -> Void)?
+    /// Leaves out the play entries, as for the item that is playing.
+    var showsPlayback = true
 
     var body: some View {
         let actions = NativeActions.shared.menu(item: item, context: context, inEditablePlaylist: inEditablePlaylist)
             .filter { $0 != .playFromHere || playFromHere != nil }
-        Section {
-            ForEach(actions.filter(\.plays), id: \.self, content: button)
+        if showsPlayback {
+            Section {
+                ForEach(actions.filter(\.plays), id: \.self, content: button)
+            }
         }
         Section {
             ForEach(actions.filter { !$0.plays }, id: \.self, content: button)
@@ -198,22 +202,24 @@ struct ToastBanner: View {
 
 extension View {
     /// The playlist chooser, the removal confirmation and the toasts of the long-press menus.
-    func itemActionPresentations() -> some View {
-        modifier(ItemActionPresentations())
+    /// [isActive] is false while a screen above this one shows them instead.
+    func itemActionPresentations(isActive: Bool = true) -> some View {
+        modifier(ItemActionPresentations(isActive: isActive))
     }
 }
 
 private struct ItemActionPresentations: ViewModifier {
+    let isActive: Bool
     @ObservedObject private var model = ItemActionsModel.shared
 
     func body(content: Content) -> some View {
         content
-            .sheet(item: $model.playlistTarget) { item in
+            .sheet(item: isActive ? $model.playlistTarget : .constant(nil)) { item in
                 AddToPlaylistSheet(item: item)
             }
             .confirmationDialog(
                 "Remove from Library?",
-                isPresented: Binding(get: { model.removalTarget != nil }, set: { if !$0 { model.removalTarget = nil } }),
+                isPresented: Binding(get: { isActive && model.removalTarget != nil }, set: { if !$0 { model.removalTarget = nil } }),
                 titleVisibility: .visible,
                 presenting: model.removalTarget
             ) { item in
@@ -222,7 +228,7 @@ private struct ItemActionPresentations: ViewModifier {
                 }
             }
             .overlay(alignment: .top) {
-                if let toast = model.toast {
+                if isActive, let toast = model.toast {
                     ToastBanner(message: toast).padding(.top, 8)
                 }
             }
