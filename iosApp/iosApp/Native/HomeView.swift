@@ -82,9 +82,7 @@ private struct HomeRowView: View {
 
     @ViewBuilder
     private func tile(_ item: NativeMediaItem) -> some View {
-        let menu = MediaContextMenu(item: item, canShuffle: model.screen.canShuffle) { shuffle in
-            model.screen.play(item: item, shuffle: shuffle)
-        }
+        let menu = MediaContextMenu(item: item)
         Group {
             if item.opensDetails {
                 NavigationLink(value: LibraryRoute.item(item)) { MediaTile(item: item) }

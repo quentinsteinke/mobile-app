@@ -15,6 +15,7 @@ import io.music_assistant.client.data.model.client.items.AppMediaItem
 import io.music_assistant.client.data.model.client.items.Artist
 import io.music_assistant.client.data.model.client.items.Audiobook
 import io.music_assistant.client.data.model.client.items.PlayableItem
+import io.music_assistant.client.data.model.client.items.Playlist
 import io.music_assistant.client.data.model.client.items.PodcastEpisode
 import io.music_assistant.client.data.model.client.items.Track
 import io.music_assistant.client.data.model.client.items.canBeFavorited
@@ -68,6 +69,8 @@ data class NativeMediaItem(
     val opensDetails: Boolean,
     val canPlayShuffled: Boolean,
     val canBeFavorited: Boolean,
+    /** The server position in a playlist listing, the key for removing the row. */
+    val position: Int?,
     val item: AppMediaItem,
 )
 
@@ -93,6 +96,7 @@ internal fun AppMediaItem.toNative(): NativeMediaItem = NativeMediaItem(
     opensDetails = opensItemDetails,
     canPlayShuffled = canPlayShuffled,
     canBeFavorited = canBeFavorited,
+    position = (this as? PlayableItem)?.position,
     item = this,
 )
 
@@ -230,6 +234,8 @@ data class NativeDetailsState(
     val topTracks: List<NativeMediaItem>,
     val canEditLibrary: Boolean,
     val canShuffle: Boolean,
+    /** The page is a playlist that the user can edit, so its rows offer "Remove from playlist". */
+    val isEditablePlaylist: Boolean,
 )
 
 /**
@@ -283,6 +289,7 @@ class NativeItemDetails(itemId: String, mediaType: MediaType, provider: String) 
             topTracks = sections.topTracks,
             canEditLibrary = scopes.canEditLibrary,
             canShuffle = support.shuffle && header?.canPlayShuffled == true,
+            isEditablePlaylist = scopes.canEditLibrary && header is Playlist && header.isEditable,
         )
     }.stateIn(scope, SharingStarted.Eagerly, initialState)
 
@@ -315,6 +322,13 @@ class NativeItemDetails(itemId: String, mediaType: MediaType, provider: String) 
 
     fun reload() = details.reload()
 
+    /** Removes [item] from this playlist page, then loads the page again. */
+    fun removeFromPlaylist(item: NativeMediaItem) {
+        val playlistId = details.state.value.itemState.dataOrNull?.itemId ?: return
+        val position = item.position ?: return
+        NativeActions.removeFromPlaylist(playlistId, position, details::reload)
+    }
+
     private data class ArtistSections(
         val library: List<NativeMediaItem> = emptyList(),
         val all: List<NativeMediaItem> = emptyList(),
@@ -332,6 +346,7 @@ class NativeItemDetails(itemId: String, mediaType: MediaType, provider: String) 
             topTracks = emptyList(),
             canEditLibrary = false,
             canShuffle = false,
+            isEditablePlaylist = false,
         )
     }
 }

@@ -113,13 +113,13 @@ struct ItemDetailView: View {
             }
             .mediaRowInsets()
             .contextMenu {
-                MediaContextMenu(item: item, canShuffle: false) { _ in model.screen.play(item: item) }
-                if model.state.canEditLibrary && item.canBeFavorited {
-                    Button(item.isFavorite ? "Remove from Favorites" : "Favorite",
-                           systemImage: item.isFavorite ? "heart.slash" : "heart") {
-                        model.screen.toggleFavorite(item: item)
-                    }
-                }
+                MediaContextMenu(
+                    item: item,
+                    context: header.mediaType.menuContext,
+                    inEditablePlaylist: model.state.isEditablePlaylist,
+                    playFromHere: { model.screen.play(item: item) },
+                    removeFromPlaylist: { model.screen.removeFromPlaylist(item: item) }
+                )
             }
         }
         if !items.isEmpty {
@@ -132,27 +132,7 @@ struct ItemDetailView: View {
     private var overflowMenu: some View {
         Menu {
             if let header = model.state.header {
-                Button("Play", systemImage: "play.fill") { model.screen.play(shuffle: false) }
-                    .disabled(!header.isPlayable)
-                if model.state.canShuffle {
-                    Button("Shuffle", systemImage: "shuffle") { model.screen.play(shuffle: true) }
-                }
-                if model.state.canEditLibrary {
-                    Section {
-                        if header.isInLibrary && header.canBeFavorited {
-                            Button(header.isFavorite ? "Remove from Favorites" : "Favorite",
-                                   systemImage: header.isFavorite ? "heart.slash" : "heart") {
-                                model.screen.toggleFavorite()
-                            }
-                        }
-                        if header.mediaType != .genre {
-                            Button(header.isInLibrary ? "Remove from Library" : "Add to Library",
-                                   systemImage: header.isInLibrary ? "minus.circle" : "plus.circle") {
-                                model.screen.toggleLibrary()
-                            }
-                        }
-                    }
-                }
+                MediaContextMenu(item: header)
             }
         } label: {
             Image(systemName: "ellipsis")

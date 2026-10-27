@@ -100,6 +100,16 @@ enum LibraryRoute: Hashable {
 
 /// Titles and SF Symbols of the library categories. English for now, like `NativeStrings`.
 extension MediaType {
+    /// The menu context of the rows of a page of this type ("Play album from here").
+    var menuContext: NativeMenuContext {
+        switch self {
+        case .album: .album
+        case .playlist: .playlist
+        case .podcast: .podcast
+        default: .list
+        }
+    }
+
     var libraryTitle: String {
         switch self {
         case .artist: return "Artists"

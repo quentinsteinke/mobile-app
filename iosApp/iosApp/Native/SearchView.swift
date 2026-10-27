@@ -80,9 +80,7 @@ struct SearchView: View {
 
     @ViewBuilder
     private func row(_ item: NativeMediaItem) -> some View {
-        let menu = MediaContextMenu(item: item, canShuffle: model.screen.canShuffle) { shuffle in
-            model.screen.play(item: item, shuffle: shuffle)
-        }
+        let menu = MediaContextMenu(item: item)
         if item.opensDetails && item.mediaType != .track {
             NavigationLink(value: LibraryRoute.item(item)) { MediaRow(item: item) }
                 .contextMenu { menu }

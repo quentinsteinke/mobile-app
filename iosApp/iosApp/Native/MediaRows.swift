@@ -110,19 +110,3 @@ struct ExplicitBadge: View {
             .accessibilityLabel("Explicit")
     }
 }
-
-/// The long-press menu of a list item.
-struct MediaContextMenu: View {
-    let item: NativeMediaItem
-    let canShuffle: Bool
-    let play: (_ shuffle: Bool) -> Void
-
-    var body: some View {
-        if item.isPlayable || item.opensDetails {
-            Button("Play", systemImage: "play.fill") { play(false) }
-            if canShuffle && item.canPlayShuffled {
-                Button("Shuffle", systemImage: "shuffle") { play(true) }
-            }
-        }
-    }
-}

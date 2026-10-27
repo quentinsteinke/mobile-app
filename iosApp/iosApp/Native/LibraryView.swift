@@ -187,9 +187,7 @@ struct LibraryListView: View {
     /// Items with a detail page open it; the others (tracks, radio) play on tap.
     @ViewBuilder
     private func itemLink<Label: View>(_ item: NativeMediaItem, @ViewBuilder label: () -> Label) -> some View {
-        let menu = MediaContextMenu(item: item, canShuffle: model.screen.canShuffle) { shuffle in
-            model.screen.play(item: item, shuffle: shuffle)
-        }
+        let menu = MediaContextMenu(item: item)
         if item.opensDetails {
             NavigationLink(value: LibraryRoute.item(item)) { label() }
                 .buttonStyle(.plain)
