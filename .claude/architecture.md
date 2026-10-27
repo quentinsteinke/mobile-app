@@ -168,6 +168,20 @@ actual class PlatformFeature {
   again the hints that the client lost. The queue DJ menu (`QueueDjViewModel`) and the stations
   screen show their cache and use only these changes. A show on a queue does not lock the queue DJ.
 
+## iOS Native UI
+
+- The iOS main screens are SwiftUI (`iosApp/iosApp/Native/`) on the Kotlin core, through SKIE.
+  See `docs/ios-native-port.md`.
+- A bridge in `iosMain/.../nativeui/` wraps the existing view models for Swift (`NativeScreen`
+  owns their `ViewModelStore`). Reuse the Compose view model and its gates. Do not copy the
+  logic into Swift.
+- Shared code reaches the native shell only through optional hooks (`LocalNativeTabShell`,
+  `LocalNativeSettingsHost`, `LocalNativeMessageSink`). Android provides none, so its behavior
+  does not change.
+- Read the iPhone Duo fold with `readsFold(into:)` and lay two panes out with `FoldSplit`
+  (`Native/Fold.swift`). Keep each element on one side of the fold.
+- Native labels use `L(key, english)` with a key of `composeResources/values/strings.xml`.
+
 ## HTTP Clients
 
 - Get every `HttpClient` from the Koin `HttpClientFactory`. Do not call `HttpClient(engine)` directly.
