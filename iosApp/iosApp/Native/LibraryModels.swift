@@ -75,6 +75,11 @@ final class ItemDetailsModel: ObservableObject {
 enum LibraryRoute: Hashable {
     case list(MediaType)
     case item(itemId: String, mediaType: MediaType, provider: String, title: String)
+    /// A list that a page already has, in full ("See All").
+    case items(title: String, items: [NativeMediaItem])
+    /// One level of Browse; the root when [path] is nil.
+    case browse(path: String?, title: String)
+    case aiRadio
 
     static func item(_ item: NativeMediaItem) -> LibraryRoute {
         .item(itemId: item.itemId, mediaType: item.mediaType, provider: item.provider, title: item.title)
@@ -89,6 +94,8 @@ enum LibraryRoute: Hashable {
         switch self {
         case .list(let type): return type
         case .item(_, let type, _, _): return type
+        case .items(_, let items): return items.first?.mediaType ?? .track
+        case .browse, .aiRadio: return .folder
         }
     }
 
@@ -135,14 +142,6 @@ extension MediaType {
         case .radio: return "dot.radiowaves.left.and.right"
         case .genre: return "guitars"
         default: return "square.grid.2x2"
-        }
-    }
-
-    /// Lists of these types show tiles; the others show rows.
-    var showsGrid: Bool {
-        switch self {
-        case .album, .playlist, .podcast, .audiobook, .radio: return true
-        default: return false
         }
     }
 }
@@ -206,6 +205,12 @@ extension View {
                 LibraryListView(mediaType: mediaType, bottomInset: bottomInset)
             case .item:
                 ItemDetailView(route: route, bottomInset: bottomInset)
+            case .items(let title, let items):
+                ItemsListView(title: title, items: items, bottomInset: bottomInset)
+            case .browse(let path, let title):
+                BrowseView(path: path, title: title, bottomInset: bottomInset)
+            case .aiRadio:
+                AiRadioView(bottomInset: bottomInset)
             }
         }
     }

@@ -92,6 +92,50 @@ struct ItemDetailView: View {
                 .padding()
                 .listRowSeparator(.hidden)
         }
+        let artists = model.state.genreArtists
+        if !artists.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Artists").font(.title3.weight(.bold))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 14) {
+                        ForEach(artists, id: \.key) { artist in
+                            NavigationLink(value: LibraryRoute.item(artist)) { MediaTile(item: artist).frame(width: 120) }
+                                .buttonStyle(.plain)
+                                .contextMenu { MediaContextMenu(item: artist) }
+                        }
+                    }
+                }
+            }
+            .mediaRowInsets()
+            .listRowSeparator(.hidden)
+        }
+        let chapters = model.state.chapters
+        if !chapters.isEmpty {
+            Section {
+                ForEach(chapters, id: \.position) { chapter in
+                    Button { model.screen.playChapter(position: chapter.position) } label: {
+                        HStack(spacing: 12) {
+                            Text("\(chapter.position + 1)")
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 24, alignment: .trailing)
+                            Text(chapter.name).lineLimit(2)
+                            Spacer(minLength: 8)
+                            if chapter.durationSec > 0 {
+                                Text(formatPlaybackTime(chapter.durationSec))
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .mediaRowInsets()
+                }
+            } header: {
+                Text("Chapters").font(.title3.weight(.bold)).foregroundStyle(.primary).textCase(nil)
+            }
+        }
         let items = model.state.items
         let numbered = header.mediaType == .album
         ForEach(Array(items.enumerated()), id: \.element.key) { index, item in
@@ -133,6 +177,9 @@ struct ItemDetailView: View {
         Menu {
             if let header = model.state.header {
                 MediaContextMenu(item: header)
+                if model.state.isPlaylist {
+                    Button("Refresh", systemImage: "arrow.clockwise") { model.screen.refreshPlaylist() }
+                }
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -238,10 +285,16 @@ private struct DetailFooter: View {
     }
 }
 
-/// An artist: the round portrait, Play and Shuffle, the top songs and the album rows.
+/// An artist: the round portrait, Play and Shuffle, the top songs, the album rows and the
+/// similar artists. An artist without top songs from a provider shows its songs.
 private struct ArtistPage: View {
     @ObservedObject var model: ItemDetailsModel
     let header: NativeMediaItem
+
+    private var songs: [NativeMediaItem] {
+        let top = model.state.topTracks
+        return top.isEmpty ? model.state.items.filter { $0.mediaType == .track } : top
+    }
 
     var body: some View {
         ScrollView {
@@ -269,38 +322,55 @@ private struct ArtistPage: View {
                     .frame(maxWidth: 420)
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, pageMargin)
 
-                if !model.state.topTracks.isEmpty {
+                if !songs.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        SectionTitle("Top Songs")
-                        ForEach(model.state.topTracks.prefix(5), id: \.key) { track in
+                        SectionTitle(model.state.topTracks.isEmpty ? "Songs" : "Top Songs",
+                                     seeAll: songs.count > 5 ? LibraryRoute.items(title: header.title, items: songs) : nil)
+                        ForEach(songs.prefix(5), id: \.key) { track in
                             Button { model.screen.play(item: track) } label: { MediaRow(item: track) }
                                 .buttonStyle(.plain)
                                 .padding(.horizontal, pageMargin)
+                                .contextMenu { MediaContextMenu(item: track) }
                             Divider().padding(.leading, pageMargin + 58)
                         }
                     }
                 }
                 AlbumRow(title: "In Your Library", items: model.state.libraryAlbums)
                 AlbumRow(title: "Albums", items: model.state.allAlbums)
+                AlbumRow(title: "Similar Artists", items: model.state.similarArtists)
             }
             .padding(.vertical, 16)
         }
+        .onAppear { if model.state.similarArtistsLoad == nil { model.screen.loadSimilarArtists() } }
     }
 }
 
 private struct SectionTitle: View {
     let text: String
-    init(_ text: String) { self.text = text }
+    var seeAll: LibraryRoute?
+
+    init(_ text: String, seeAll: LibraryRoute? = nil) {
+        self.text = text
+        self.seeAll = seeAll
+    }
 
     var body: some View {
-        Text(text)
-            .font(.title2.weight(.bold))
-            .padding(.horizontal, pageMargin)
+        HStack(alignment: .firstTextBaseline) {
+            Text(text)
+                .font(.title2.weight(.bold))
+            Spacer()
+            if let seeAll {
+                NavigationLink("See All", value: seeAll)
+                    .font(.body)
+            }
+        }
+        .padding(.horizontal, pageMargin)
     }
 }
 
-/// A horizontally scrolling row of album tiles.
+/// A horizontally scrolling row of tiles.
 private struct AlbumRow: View {
     let title: String
     let items: [NativeMediaItem]
@@ -308,7 +378,7 @@ private struct AlbumRow: View {
     var body: some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(title)
+                SectionTitle(title, seeAll: items.count > 6 ? LibraryRoute.items(title: title, items: items) : nil)
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 14) {
                         ForEach(items, id: \.key) { item in
@@ -316,11 +386,48 @@ private struct AlbumRow: View {
                                 MediaTile(item: item).frame(width: 160)
                             }
                             .buttonStyle(.plain)
+                            .contextMenu { MediaContextMenu(item: item) }
                         }
                     }
                     .padding(.horizontal, pageMargin)
                 }
             }
         }
+    }
+}
+
+/// A list that a page already loaded, shown in full: the songs or the albums of an artist.
+struct ItemsListView: View {
+    let title: String
+    let items: [NativeMediaItem]
+    var bottomInset: CGFloat = 0
+
+    var body: some View {
+        Group {
+            if items.contains(where: { $0.mediaType != .track }) {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 240), spacing: 16)], spacing: 20) {
+                        ForEach(items, id: \.key) { item in
+                            NavigationLink(value: LibraryRoute.item(item)) { MediaTile(item: item) }
+                                .buttonStyle(.plain)
+                                .contextMenu { MediaContextMenu(item: item) }
+                        }
+                    }
+                    .padding(.horizontal, pageMargin)
+                }
+            } else {
+                List(items, id: \.key) { item in
+                    Button { NativeActions.shared.perform(item: item, action: .playNow) } label: { MediaRow(item: item) }
+                        .buttonStyle(.plain)
+                        .mediaRowInsets()
+                        .listSectionSeparator(.hidden, edges: .top)
+                        .contextMenu { MediaContextMenu(item: item) }
+                }
+                .listStyle(.plain)
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaPadding(.bottom, bottomInset)
     }
 }

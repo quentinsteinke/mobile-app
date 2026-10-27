@@ -14,17 +14,22 @@ import io.music_assistant.client.data.model.client.items.Album
 import io.music_assistant.client.data.model.client.items.AppMediaItem
 import io.music_assistant.client.data.model.client.items.Artist
 import io.music_assistant.client.data.model.client.items.Audiobook
+import io.music_assistant.client.data.model.client.items.Genre
 import io.music_assistant.client.data.model.client.items.PlayableItem
 import io.music_assistant.client.data.model.client.items.Playlist
 import io.music_assistant.client.data.model.client.items.PodcastEpisode
+import io.music_assistant.client.data.model.client.items.RecommendationFolder
 import io.music_assistant.client.data.model.client.items.Track
 import io.music_assistant.client.data.model.client.items.canBeFavorited
 import io.music_assistant.client.data.model.client.items.image
 import io.music_assistant.client.data.play.PlayMode
+import io.music_assistant.client.settings.SeriesGrouping
+import io.music_assistant.client.settings.ViewMode
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.common.items.canPlayShuffled
 import io.music_assistant.client.ui.compose.common.viewmodel.ActionsViewModel
 import io.music_assistant.client.ui.compose.item.ItemDetailsViewModel
+import io.music_assistant.client.ui.compose.item.ViewModeViewModel
 import io.music_assistant.client.ui.compose.item.artist.ArtistDetailsViewModel
 import io.music_assistant.client.ui.compose.item.opensItemDetails
 import io.music_assistant.client.ui.compose.library.LibraryCategoriesViewModel
@@ -71,6 +76,8 @@ data class NativeMediaItem(
     val canBeFavorited: Boolean,
     /** The server position in a playlist listing, the key for removing the row. */
     val position: Int?,
+    /** A browse folder's path, which opens the next level of Browse. */
+    val browsePath: String?,
     val item: AppMediaItem,
 )
 
@@ -97,6 +104,7 @@ internal fun AppMediaItem.toNative(): NativeMediaItem = NativeMediaItem(
     canPlayShuffled = canPlayShuffled,
     canBeFavorited = canBeFavorited,
     position = (this as? PlayableItem)?.position,
+    browsePath = (this as? RecommendationFolder)?.let { it.path ?: it.uri },
     item = this,
 )
 
@@ -153,15 +161,25 @@ data class NativeListState(
     val sortChoices: List<NativeSortChoice>,
     val sortFieldName: String,
     val sortDescending: Boolean,
+    /** Tiles rather than rows, the user's choice for this media type. */
+    val showsGrid: Boolean,
+    /** Audiobooks only: books of a series are grouped into one series row. */
+    val groupsSeries: Boolean,
+    /** The Playlists list, for a user who can create one. */
+    val canCreatePlaylist: Boolean,
 )
 
 /** One library list (albums, artists, tracks...), over [LibraryListViewModel]. */
-class NativeLibraryList(mediaType: MediaType) : NativeScreen() {
+class NativeLibraryList(private val mediaType: MediaType) : NativeScreen() {
     private val list = viewModel { get<LibraryListViewModel> { parametersOf(mediaType) } }
+    private val viewModes = viewModel { get<ViewModeViewModel>() }
     private val dataSource: MainDataSource = get()
 
-    val state: StateFlow<NativeListState> = list.state
-        .map { state ->
+    val state: StateFlow<NativeListState> = combine(
+        list.state,
+        viewModes.viewModeFor(mediaType),
+        dataSource.grantedScopes,
+    ) { state, viewMode, scopes ->
             val menu = state.sortMenu
             NativeListState(
                 load = state.dataState.load(),
@@ -175,9 +193,18 @@ class NativeLibraryList(mediaType: MediaType) : NativeScreen() {
                 },
                 sortFieldName = state.sortOption.field.name,
                 sortDescending = state.sortOption.descending,
+                showsGrid = viewMode == ViewMode.GRID,
+                groupsSeries = mediaType == MediaType.AUDIOBOOK && state.seriesGrouping == SeriesGrouping.GROUPED,
+                canCreatePlaylist = mediaType == MediaType.PLAYLIST && scopes.canEditLibrary,
             )
         }
         .stateIn(scope, SharingStarted.Eagerly, initialState)
+
+    fun toggleViewMode() = viewModes.toggleFor(mediaType)
+
+    fun toggleSeriesGrouping() = list.onSeriesGroupingToggled()
+
+    fun createPlaylist(name: String) = list.createPlaylist(name)
 
     /** Shuffle play is offered for this server and these items. */
     val canShuffle: Boolean get() = dataSource.playMediaSupport.value.shuffle
@@ -219,6 +246,9 @@ class NativeLibraryList(mediaType: MediaType) : NativeScreen() {
             sortChoices = emptyList(),
             sortFieldName = "",
             sortDescending = false,
+            showsGrid = false,
+            groupsSeries = false,
+            canCreatePlaylist = false,
         )
     }
 }
@@ -236,7 +266,19 @@ data class NativeDetailsState(
     val canShuffle: Boolean,
     /** The page is a playlist that the user can edit, so its rows offer "Remove from playlist". */
     val isEditablePlaylist: Boolean,
+    /** The chapters of an audiobook page. */
+    val chapters: List<NativeChapter>,
+    /** The artists of a genre page. */
+    val genreArtists: List<NativeMediaItem>,
+    /** The artists like this artist, once [NativeItemDetails.loadSimilarArtists] ran. */
+    val similarArtists: List<NativeMediaItem>,
+    val similarArtistsLoad: NativeLoad?,
+    /** A playlist page, which can ask the provider for a new selection. */
+    val isPlaylist: Boolean,
 )
+
+/** A chapter of an audiobook. */
+data class NativeChapter(val position: Int, val name: String, val startSec: Double, val durationSec: Double)
 
 /**
  * One detail page (album, playlist, artist, podcast, audiobook, genre), over
@@ -290,6 +332,16 @@ class NativeItemDetails(itemId: String, mediaType: MediaType, provider: String) 
             canEditLibrary = scopes.canEditLibrary,
             canShuffle = support.shuffle && header?.canPlayShuffled == true,
             isEditablePlaylist = scopes.canEditLibrary && header is Playlist && header.isEditable,
+            chapters = (header as? Audiobook)?.chapters.orEmpty().map {
+                NativeChapter(it.position, it.name, it.start, it.duration)
+            },
+            genreArtists = state.artistsState.dataOrNull.orEmpty().takeIf { header is Genre }.orEmpty().map { it.toNative() },
+            similarArtists = state.similarArtistsState.dataOrNull.orEmpty().map { it.toNative() },
+            similarArtistsLoad = when (state.similarArtistsState) {
+                is DataState.NoData -> null
+                else -> state.similarArtistsState.load()
+            },
+            isPlaylist = header is Playlist,
         )
     }.stateIn(scope, SharingStarted.Eagerly, initialState)
 
@@ -322,6 +374,14 @@ class NativeItemDetails(itemId: String, mediaType: MediaType, provider: String) 
 
     fun reload() = details.reload()
 
+    /** Plays the audiobook from the chapter at [position]. */
+    fun playChapter(position: Int) = details.onChapterClick(position)
+
+    fun loadSimilarArtists() = details.loadSimilarArtists()
+
+    /** Asks the provider of this playlist for a new selection. */
+    fun refreshPlaylist() = details.refreshPlaylistTracks()
+
     /** Removes [item] from this playlist page, then loads the page again. */
     fun removeFromPlaylist(item: NativeMediaItem) {
         val playlistId = details.state.value.itemState.dataOrNull?.itemId ?: return
@@ -347,6 +407,11 @@ class NativeItemDetails(itemId: String, mediaType: MediaType, provider: String) 
             canEditLibrary = false,
             canShuffle = false,
             isEditablePlaylist = false,
+            chapters = emptyList(),
+            genreArtists = emptyList(),
+            similarArtists = emptyList(),
+            similarArtistsLoad = null,
+            isPlaylist = false,
         )
     }
 }

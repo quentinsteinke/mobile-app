@@ -10,21 +10,31 @@ struct LibraryView: View {
 
     @StateObject private var model = LibraryCategoriesModel()
     @State private var path: [LibraryRoute] = []
-    @State private var selected: MediaType?
+    @State private var selected: LibraryRoute?
     @State private var fold: FoldDivision?
     @Environment(\.horizontalSizeClass) private var sizeClass
+
+    /// The route of each visible category, in the user's order.
+    private var routes: [LibraryRoute] {
+        model.categories.compactMap { category in
+            if let mediaType = category.mediaType { return .list(mediaType) }
+            switch category.name {
+            case "BROWSE": return .browse(path: nil, title: "Browse")
+            case "AI_RADIO": return .aiRadio
+            default: return nil
+            }
+        }
+    }
 
     var body: some View {
         if sizeClass == .regular {
             splitView
         } else {
             NavigationStack(path: $path) {
-                List(model.categories, id: \.name) { category in
-                    if let mediaType = category.mediaType {
-                        NavigationLink(value: LibraryRoute.list(mediaType)) { CategoryLabel(mediaType: mediaType) }
-                            .mediaRowInsets()
-                            .listSectionSeparator(.hidden, edges: .top)
-                    }
+                List(routes, id: \.self) { route in
+                    NavigationLink(value: route) { CategoryLabel(route: route) }
+                        .mediaRowInsets()
+                        .listSectionSeparator(.hidden, edges: .top)
                 }
                 .listStyle(.plain)
                 .navigationTitle("Library")
@@ -37,10 +47,8 @@ struct LibraryView: View {
     private var splitView: some View {
         GeometryReader { geometry in
             NavigationSplitView(columnVisibility: .constant(.all)) {
-                List(model.categories, id: \.name, selection: $selected) { category in
-                    if let mediaType = category.mediaType {
-                        CategoryLabel(mediaType: mediaType).tag(mediaType)
-                    }
+                List(routes, id: \.self, selection: $selected) { route in
+                    CategoryLabel(route: route).tag(route)
                 }
                 .navigationTitle("Library")
                 .navigationSplitViewColumnWidth(sidebarWidth(geometry.size))
@@ -49,10 +57,14 @@ struct LibraryView: View {
             } detail: {
                 NavigationStack(path: $path) {
                     Group {
-                        if let selected {
-                            LibraryListView(mediaType: selected, bottomInset: bottomInset)
-                                .id(selected)
-                        } else {
+                        switch selected {
+                        case .list(let mediaType):
+                            LibraryListView(mediaType: mediaType, bottomInset: bottomInset).id(mediaType)
+                        case .browse(let browsePath, let title):
+                            BrowseView(path: browsePath, title: title, bottomInset: bottomInset)
+                        case .aiRadio:
+                            AiRadioView(bottomInset: bottomInset)
+                        default:
                             ContentUnavailableView("Library", systemImage: "square.stack")
                         }
                     }
@@ -65,9 +77,9 @@ struct LibraryView: View {
         }
         .readsFold(into: $fold)
         .onChange(of: selected) { _, _ in path = [] }
-        .onAppear { if selected == nil { selected = model.categories.compactMap(\.mediaType).first } }
+        .onAppear { if selected == nil { selected = routes.first } }
         .onChange(of: model.categories.count) { _, _ in
-            if selected == nil { selected = model.categories.compactMap(\.mediaType).first }
+            if selected == nil { selected = routes.first }
         }
     }
 
@@ -82,17 +94,35 @@ struct LibraryView: View {
 }
 
 private struct CategoryLabel: View {
-    let mediaType: MediaType
+    let route: LibraryRoute
 
     var body: some View {
         Label {
-            Text(mediaType.libraryTitle)
+            Text(title)
                 .font(.title3)
         } icon: {
-            Image(systemName: mediaType.librarySymbol)
+            Image(systemName: symbol)
                 .foregroundStyle(.tint)
         }
         .padding(.vertical, 6)
+    }
+
+    private var title: String {
+        switch route {
+        case .list(let mediaType): mediaType.libraryTitle
+        case .browse: "Browse"
+        case .aiRadio: "AI Radio"
+        default: ""
+        }
+    }
+
+    private var symbol: String {
+        switch route {
+        case .list(let mediaType): mediaType.librarySymbol
+        case .browse: "folder"
+        case .aiRadio: "sparkles"
+        default: "square.stack"
+        }
     }
 }
 
@@ -103,6 +133,8 @@ struct LibraryListView: View {
 
     @StateObject private var model: LibraryListModel
     @State private var query = ""
+    @State private var asksPlaylistName = false
+    @State private var newPlaylistName = ""
 
     init(mediaType: MediaType, bottomInset: CGFloat) {
         self.mediaType = mediaType
@@ -116,7 +148,23 @@ struct LibraryListView: View {
             .navigationBarTitleDisplayMode(.large)
             .searchable(text: $query, prompt: "Search \(mediaType.libraryTitle)")
             .onChange(of: query) { _, newQuery in model.screen.search(query: newQuery) }
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { sortMenu } }
+            .toolbar {
+                if model.state.canCreatePlaylist {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("New Playlist", systemImage: "plus") { asksPlaylistName = true }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) { sortMenu }
+            }
+            .alert("New Playlist", isPresented: $asksPlaylistName) {
+                TextField("Name", text: $newPlaylistName)
+                Button("Cancel", role: .cancel) { newPlaylistName = "" }
+                Button("Create") {
+                    let name = newPlaylistName.trimmingCharacters(in: .whitespaces)
+                    newPlaylistName = ""
+                    if !name.isEmpty { model.screen.createPlaylist(name: name) }
+                }
+            }
             .safeAreaPadding(.bottom, bottomInset)
     }
 
@@ -143,7 +191,7 @@ struct LibraryListView: View {
                 ContentUnavailableView.search(text: model.state.searchQuery)
             }
         default:
-            if mediaType.showsGrid { grid } else { rows }
+            if model.state.showsGrid { grid } else { rows }
         }
     }
 
@@ -228,6 +276,22 @@ struct LibraryListView: View {
                     set: { model.screen.setFavoritesOnly(enabled: $0) }
                 )) {
                     Label("Favorites Only", systemImage: "heart")
+                }
+                if mediaType == .audiobook {
+                    Toggle(isOn: Binding(
+                        get: { model.state.groupsSeries },
+                        set: { _ in model.screen.toggleSeriesGrouping() }
+                    )) {
+                        Label("Group Series", systemImage: "books.vertical")
+                    }
+                }
+            }
+            Section {
+                Button {
+                    model.screen.toggleViewMode()
+                } label: {
+                    Label(model.state.showsGrid ? "View as List" : "View as Grid",
+                          systemImage: model.state.showsGrid ? "list.bullet" : "square.grid.2x2")
                 }
             }
         } label: {
