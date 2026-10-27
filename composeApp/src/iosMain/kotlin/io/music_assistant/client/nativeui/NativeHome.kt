@@ -4,6 +4,7 @@ import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.data.model.client.MediaType
 import io.music_assistant.client.data.model.client.QueueOption
 import io.music_assistant.client.data.play.PlayMode
+import io.music_assistant.client.settings.SettingsRepository
 import io.music_assistant.client.ui.compose.common.DataState
 import io.music_assistant.client.ui.compose.home.HomeScreenViewModel
 import io.music_assistant.client.ui.compose.home.getCategories
@@ -26,7 +27,11 @@ data class NativeHomeRow(
     val isLoading: Boolean,
 )
 
-data class NativeHomeState(val load: NativeLoad, val rows: List<NativeHomeRow>)
+/** A home row in the row editor, shown or hidden. */
+data class NativeHomeRowChoice(val rowId: String, val title: String, val enabled: Boolean)
+
+/** [choices] are all the rows in their order, for the row editor. */
+data class NativeHomeState(val load: NativeLoad, val rows: List<NativeHomeRow>, val choices: List<NativeHomeRowChoice>)
 
 /**
  * The native home page over [HomeScreenViewModel]. The rows, their order and the hidden rows
@@ -42,7 +47,8 @@ class NativeHome : NativeScreen() {
             val shortcutsTitle = getString(Res.string.home_shortcuts)
             val folderNames = state.recommendations.dataOrNull.orEmpty()
                 .associate { it.folder.itemId to it.folder.displayName }
-            val rows = getCategories(state.recommendations, state.shortcuts, state.homeRowsConfig)
+            val categories = getCategories(state.recommendations, state.shortcuts, state.homeRowsConfig)
+            val rows = categories
                 .filter { (_, enabled) -> enabled }
                 .map { (row, _) ->
                     NativeHomeRow(
@@ -59,9 +65,16 @@ class NativeHome : NativeScreen() {
                     else -> if (rows.isEmpty()) NativeLoad.EMPTY else NativeLoad.LOADED
                 },
                 rows = rows,
+                choices = categories.map { (row, enabled) ->
+                    NativeHomeRowChoice(row.category.id, folderNames[row.category.id] ?: shortcutsTitle, enabled)
+                },
             )
         }
-        .stateIn(scope, SharingStarted.Eagerly, NativeHomeState(NativeLoad.LOADING, emptyList()))
+        .stateIn(scope, SharingStarted.Eagerly, NativeHomeState(NativeLoad.LOADING, emptyList(), emptyList()))
+
+    /** Saves the order and the shown rows of the row editor. */
+    fun saveRows(choices: List<NativeHomeRowChoice>) =
+        home.saveHomeRows(choices.map { SettingsRepository.HomeRowPref(it.rowId, it.enabled) })
 
     val canShuffle: Boolean get() = dataSource.playMediaSupport.value.shuffle
 
@@ -79,6 +92,9 @@ data class NativeSearchState(
     val load: NativeLoad,
     val sections: List<NativeSearchSection>,
     val libraryOnly: Boolean,
+    /** The search scopes in order, and the one picked; null is all of them. */
+    val scopes: List<MediaType>,
+    val scope: MediaType?,
 )
 
 /** The native search over [SearchViewModel]. An empty query gives no sections. */
@@ -106,15 +122,31 @@ class NativeSearch : NativeScreen() {
                     )
                 },
                 libraryOnly = state.searchState.libraryOnly,
+                scopes = state.searchState.mediaTypes.map { it.type },
+                scope = state.searchState.selectedMediaTypes.singleOrNull()
+                    ?.takeIf { state.searchState.mediaTypes.size > 1 },
             )
         }
-        .stateIn(scope, SharingStarted.Eagerly, NativeSearchState("", NativeLoad.EMPTY, emptyList(), false))
+        .stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            NativeSearchState("", NativeLoad.EMPTY, emptyList(), false, emptyList(), null),
+        )
 
     val canShuffle: Boolean get() = dataSource.playMediaSupport.value.shuffle
 
     fun search(query: String) {
         search.onQueryChanged(query)
         search.onSearch()
+    }
+
+    /** Searches [mediaType] only, or every type when it is null. */
+    fun setScope(mediaType: MediaType?) {
+        val types = search.state.value.searchState.mediaTypes.map { it.type }
+        search.onFiltersChanged(
+            mediaType?.let { listOf(it) } ?: types,
+            search.state.value.searchState.libraryOnly,
+        )
     }
 
     fun setLibraryOnly(enabled: Boolean) =

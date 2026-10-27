@@ -17,9 +17,11 @@ import io.music_assistant.client.di.initKoin
 import io.music_assistant.client.di.iosModule
 import io.music_assistant.client.logging.InMemoryLogWriter
 import io.music_assistant.client.nativeui.IosSettingsHost
+import io.music_assistant.client.nativeui.NativeMessages
 import io.music_assistant.client.ui.compose.App
 import io.music_assistant.client.ui.compose.IosAppRoot
 import io.music_assistant.client.ui.compose.nav.IosTabShell
+import io.music_assistant.client.ui.compose.nav.LocalNativeMessageSink
 import io.music_assistant.client.ui.compose.nav.LocalNativeSettingsHost
 import io.music_assistant.client.ui.compose.nav.LocalNativeTabShell
 import io.music_assistant.client.ui.theme.IosPlatformStyle
@@ -74,6 +76,7 @@ fun MainViewController() = ComposeUIViewController(
         LocalPlatformStyle provides IosPlatformStyle,
         LocalNativeTabShell provides IosTabShell,
         LocalNativeSettingsHost provides IosSettingsHost,
+        LocalNativeMessageSink provides NativeMessages,
     ) {
         IosAppRoot { App() }
     }

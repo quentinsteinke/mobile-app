@@ -21,6 +21,17 @@ struct SearchView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
+                            // Eight types do not fit a scope bar on the folded iPhone Duo.
+                            Picker("Show", selection: Binding<MediaType?>(
+                                get: { model.state.scope },
+                                set: { model.screen.setScope(mediaType: $0) }
+                            )) {
+                                Text("All Types").tag(MediaType?.none)
+                                ForEach(model.state.scopes, id: \.self) { type in
+                                    Text(type.libraryTitle).tag(MediaType?.some(type))
+                                }
+                            }
+                            .pickerStyle(.inline)
                             Toggle(isOn: Binding(
                                 get: { model.state.libraryOnly },
                                 set: { model.screen.setLibraryOnly(enabled: $0) }

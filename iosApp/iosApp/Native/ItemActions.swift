@@ -12,12 +12,18 @@ final class ItemActionsModel: ObservableObject {
     @Published var removalTarget: NativeMediaItem?
     @Published private(set) var toast: String?
     private var toastTask: Task<Void, Never>?
-    private var subscription: Task<Void, Never>?
+    private var subscriptions: [Task<Void, Never>] = []
 
     private init() {
-        subscription = Task { [weak self] in
-            for await message in NativeActions.shared.toasts { self?.show(message) }
-        }
+        subscriptions = [
+            Task { [weak self] in
+                for await message in NativeActions.shared.toasts { self?.show(message) }
+            },
+            // Server errors, which the hidden Compose view would otherwise show.
+            Task { [weak self] in
+                for await message in NativeMessages.shared.messages { self?.show(message) }
+            },
+        ]
     }
 
     func show(_ message: String) {

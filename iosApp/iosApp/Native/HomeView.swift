@@ -6,6 +6,7 @@ struct HomeView: View {
     var bottomInset: CGFloat = 0
 
     @StateObject private var model = HomeModel()
+    @State private var editsRows = false
 
     var body: some View {
         NavigationStack {
@@ -15,9 +16,16 @@ struct HomeView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Refresh", systemImage: "arrow.clockwise") { model.screen.refresh() }
                     }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Edit Rows", systemImage: "slider.horizontal.3") { editsRows = true }
+                            .disabled(model.state.choices.isEmpty)
+                    }
                 }
                 .nativeDestinations(bottomInset: bottomInset)
                 .safeAreaPadding(.bottom, bottomInset)
+                .sheet(isPresented: $editsRows) {
+                    HomeRowsEditor(choices: model.state.choices) { model.screen.saveRows(choices: $0) }
+                }
         }
     }
 
@@ -95,5 +103,40 @@ private struct HomeRowView: View {
         .frame(width: 150)
         .scrollTargetLayout()
         .contextMenu { menu }
+    }
+}
+
+/// Orders the home rows and shows or hides each one.
+private struct HomeRowsEditor: View {
+    @State var choices: [NativeHomeRowChoice]
+    let save: ([NativeHomeRowChoice]) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(Array(choices.enumerated()), id: \.element.rowId) { index, choice in
+                    Toggle(choice.title, isOn: Binding(
+                        get: { choices[index].enabled },
+                        set: { choices[index] = NativeHomeRowChoice(rowId: choice.rowId, title: choice.title, enabled: $0) }
+                    ))
+                }
+                .onMove { choices.move(fromOffsets: $0, toOffset: $1) }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Home Rows")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save(choices)
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }

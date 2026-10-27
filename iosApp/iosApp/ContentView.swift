@@ -211,6 +211,7 @@ struct ContentView: View {
         // hands the window insets to the hosted Compose view, and Compose would pad them a
         // second time.
         .itemActionPresentations(isActive: !player.isNowPlayingPresented)
+        .overlay(alignment: .top) { ConnectionBanner() }
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
     }
 

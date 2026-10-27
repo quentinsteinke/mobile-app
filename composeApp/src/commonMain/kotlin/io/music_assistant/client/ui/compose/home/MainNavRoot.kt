@@ -95,6 +95,7 @@ import io.music_assistant.client.ui.compose.library.LibraryScreenState
 import io.music_assistant.client.ui.compose.nav.AdaptiveNavigationBarLayout
 import io.music_assistant.client.ui.compose.nav.BackHandler
 import io.music_assistant.client.ui.compose.nav.ConditionalBackNavDisplay
+import io.music_assistant.client.ui.compose.nav.LocalNativeMessageSink
 import io.music_assistant.client.ui.compose.nav.LocalNativeTabShell
 import io.music_assistant.client.ui.compose.nav.MultiBackStack
 import io.music_assistant.client.ui.compose.nav.NavigationItem
@@ -150,10 +151,11 @@ fun MainNavigationRoot(
 
     // Surface server-side RPC errors as toasts on top of whichever screen is active.
     // (Per-screen ToastHosts handle ActionsViewModel toasts.)
+    val nativeMessageSink = LocalNativeMessageSink.current
     LaunchedEffect(Unit) {
         errorBus.messages.collect { msg ->
             val truncated = if (msg.length > 150) msg.take(150) + "…" else msg
-            toastState.showToast(truncated, ToastDuration.LONG)
+            nativeMessageSink?.show(truncated) ?: toastState.showToast(truncated, ToastDuration.LONG)
         }
     }
 
