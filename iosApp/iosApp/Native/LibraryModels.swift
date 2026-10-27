@@ -7,18 +7,21 @@ import ComposeApp
 @MainActor
 final class LibraryCategoriesModel: ObservableObject {
     @Published private(set) var categories: [NativeCategory]
-    private let screen = NativeLibraryCategories()
-    private var task: Task<Void, Never>?
+    @Published private(set) var choices: [NativeCategoryChoice]
+    let screen = NativeLibraryCategories()
+    private var tasks: [Task<Void, Never>] = []
 
     init() {
         categories = screen.state.value
-        task = Task { [weak self, screen] in
-            for await value in screen.state { self?.categories = value }
-        }
+        choices = screen.choices.value
+        tasks = [
+            Task { [weak self, screen] in for await value in screen.state { self?.categories = value } },
+            Task { [weak self, screen] in for await value in screen.choices { self?.choices = value } },
+        ]
     }
 
     deinit {
-        task?.cancel()
+        tasks.forEach { $0.cancel() }
         screen.close()
     }
 }

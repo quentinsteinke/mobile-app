@@ -13,6 +13,7 @@ struct LibraryView: View {
     @State private var selected: LibraryRoute?
     @State private var fold: FoldDivision?
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @State private var editsCategories = false
 
     /// The route of each visible category, in the user's order.
     private var routes: [LibraryRoute] {
@@ -27,9 +28,16 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        if sizeClass == .regular {
-            splitView
-        } else {
+        Group {
+            if sizeClass == .regular { splitView } else { stackView }
+        }
+        .sheet(isPresented: $editsCategories) {
+            CategoriesEditor(choices: model.choices) { model.screen.save(choices: $0) }
+        }
+    }
+
+    private var stackView: some View {
+        Group {
             NavigationStack(path: $path) {
                 List(routes, id: \.self) { route in
                     NavigationLink(value: route) { CategoryLabel(route: route) }
@@ -38,6 +46,7 @@ struct LibraryView: View {
                 }
                 .listStyle(.plain)
                 .navigationTitle("Library")
+                .toolbar { editButton }
                 .nativeDestinations(bottomInset: bottomInset)
                 .safeAreaPadding(.bottom, bottomInset)
             }
@@ -51,6 +60,7 @@ struct LibraryView: View {
                     CategoryLabel(route: route).tag(route)
                 }
                 .navigationTitle("Library")
+                .toolbar { editButton }
                 .navigationSplitViewColumnWidth(sidebarWidth(geometry.size))
                 .toolbar(removing: .sidebarToggle)
                 .safeAreaPadding(.bottom, bottomInset)
@@ -80,6 +90,12 @@ struct LibraryView: View {
         .onAppear { if selected == nil { selected = routes.first } }
         .onChange(of: model.categories.count) { _, _ in
             if selected == nil { selected = routes.first }
+        }
+    }
+
+    private var editButton: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button("Edit", systemImage: "slider.horizontal.3") { editsCategories = true }
         }
     }
 
@@ -298,5 +314,56 @@ struct LibraryListView: View {
             Image(systemName: "line.3.horizontal.decrease")
         }
         .accessibilityLabel("Sort and Filter")
+    }
+}
+
+/// Orders the library categories and shows or hides each one.
+private struct CategoriesEditor: View {
+    @State var choices: [NativeCategoryChoice]
+    let save: ([NativeCategoryChoice]) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(Array(choices.enumerated()), id: \.element.name) { index, choice in
+                    Toggle(isOn: Binding(
+                        get: { choices[index].enabled },
+                        set: { choices[index] = NativeCategoryChoice(name: choice.name, mediaType: choice.mediaType, enabled: $0) }
+                    )) {
+                        Label(title(choice), systemImage: symbol(choice))
+                    }
+                }
+                .onMove { choices.move(fromOffsets: $0, toOffset: $1) }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Library Categories")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save(choices)
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func title(_ choice: NativeCategoryChoice) -> String {
+        if let mediaType = choice.mediaType { return mediaType.libraryTitle }
+        switch choice.name {
+        case "BROWSE": return "Browse"
+        case "AI_RADIO": return "AI Radio"
+        default: return choice.name.capitalized
+        }
+    }
+
+    private func symbol(_ choice: NativeCategoryChoice) -> String {
+        if let mediaType = choice.mediaType { return mediaType.librarySymbol }
+        return choice.name == "AI_RADIO" ? "sparkles" : "folder"
     }
 }

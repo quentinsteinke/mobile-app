@@ -33,6 +33,7 @@ import io.music_assistant.client.ui.compose.item.ViewModeViewModel
 import io.music_assistant.client.ui.compose.item.artist.ArtistDetailsViewModel
 import io.music_assistant.client.ui.compose.item.opensItemDetails
 import io.music_assistant.client.ui.compose.library.LibraryCategoriesViewModel
+import io.music_assistant.client.ui.compose.library.LibraryCategory
 import io.music_assistant.client.ui.compose.library.LibraryListViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -134,7 +135,10 @@ abstract class NativeScreen : KoinComponent {
 /** A library category as the native Library screen shows it. */
 data class NativeCategory(val name: String, val mediaType: MediaType?)
 
-/** The visible library categories, in the user's order. */
+/** A library category in the category editor, shown or hidden. */
+data class NativeCategoryChoice(val name: String, val mediaType: MediaType?, val enabled: Boolean)
+
+/** The visible library categories, in the user's order, and all of them for the editor. */
 class NativeLibraryCategories : NativeScreen() {
     private val categories = viewModel { get<LibraryCategoriesViewModel>() }
 
@@ -145,6 +149,21 @@ class NativeLibraryCategories : NativeScreen() {
             }
         }
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val choices: StateFlow<List<NativeCategoryChoice>> = categories.state
+        .map { state ->
+            state.categories.map {
+                NativeCategoryChoice(it.libraryCategory.name, it.libraryCategory.mediaType, it.enabled)
+            }
+        }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /** Saves the order and the shown categories of the editor. */
+    fun save(choices: List<NativeCategoryChoice>) = categories.onTabsConfigChanged(
+        choices.mapNotNull { choice ->
+            LibraryCategory.entries.firstOrNull { it.name == choice.name }?.let { it to choice.enabled }
+        },
+    )
 }
 
 /** A sort field that a list offers. */

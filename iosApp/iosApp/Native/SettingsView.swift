@@ -389,6 +389,11 @@ struct SettingsView: View {
                 }
             }
             .disabled(state.isPreparingShare)
+            if state.hasCrashLog {
+                Button("Share Crash Log") { model.screen.shareCrashLog(chooserTitle: "Share Crash Log") }
+                    .disabled(state.isPreparingShare)
+                Button("Delete Crash Log", role: .destructive) { model.screen.deleteCrashLog() }
+            }
             Link("Documentation", destination: URL(string: "https://music-assistant.github.io/mobile-app/")!)
             LabeledContent("Version", value: state.appVersion)
         } header: {

@@ -88,6 +88,8 @@ data class NativeSettingsState(
     val history: List<NativeHistoryEntry>,
     val appVersion: String,
     val isPreparingShare: Boolean,
+    /** The app crashed last time and kept a log to share. */
+    val hasCrashLog: Boolean,
     val localNetworkTitle: String?,
     val localNetworkBody: String?,
 )
@@ -128,8 +130,9 @@ class NativeSettings : NativeScreen() {
         auth.providers,
         theme.theme,
         settings.allowLandscapeOnAllDevices,
-    ) { authState, providers, themeSetting, landscape ->
-        AccountPart(authState, providers, themeSetting, landscape)
+        settings.hasCrashLog,
+    ) { authState, providers, themeSetting, landscape, crashLog ->
+        AccountPart(authState, providers, themeSetting, landscape, crashLog)
     }
 
     private val localPlayer: Flow<NativeLocalPlayer> = combine(
@@ -224,6 +227,10 @@ class NativeSettings : NativeScreen() {
 
     fun shareLogs(chooserTitle: String) = settings.shareLogs(chooserTitle)
 
+    fun shareCrashLog(chooserTitle: String) = settings.shareCrashLog(chooserTitle)
+
+    fun deleteCrashLog() = settings.deleteCrashLog()
+
     fun dismissLocalNetworkHint() = settings.dismissLocalNetworkOnboarding()
 
     fun removeHistory(historyKey: String) {
@@ -274,6 +281,7 @@ class NativeSettings : NativeScreen() {
             authError = (account.authState as? AuthState.Error)?.message,
             themeName = account.theme.name,
             allowLandscape = account.landscape,
+            hasCrashLog = account.crashLog,
             localPlayer = localPlayer,
             history = guidance.history.map { it.toNative() },
             appVersion = "${settings.appVersion.name} (${settings.appVersion.code})",
@@ -304,6 +312,7 @@ class NativeSettings : NativeScreen() {
         val providers: List<AuthProvider>,
         val theme: ThemeSetting,
         val landscape: Boolean,
+        val crashLog: Boolean,
     )
 
     private data class Parts(
@@ -340,6 +349,7 @@ class NativeSettings : NativeScreen() {
             authError = null,
             themeName = ThemeSetting.FollowSystem.name,
             allowLandscape = false,
+            hasCrashLog = false,
             localPlayer = NativeLocalPlayer(false, "", "", emptyList(), false, false, 0, false, false, false),
             history = emptyList(),
             appVersion = "",
