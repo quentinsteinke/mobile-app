@@ -44,6 +44,7 @@ struct PlayerOptionsMenu: View {
                     Button("Group Speakers…", systemImage: "hifispeaker.2") { showsGroup = true }
                 }
             }
+            PlayerToolsMenuSection()
             Section {
                 if let album = extras.album {
                     Button("Go to Album", systemImage: "square.stack") { route = PresentedRoute(.item(album)) }

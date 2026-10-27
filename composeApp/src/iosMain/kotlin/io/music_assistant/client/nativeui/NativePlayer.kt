@@ -157,7 +157,7 @@ data class NativePlayerState(
  * behaves as the Compose player does. One instance lives for the app's lifetime.
  */
 object NativePlayer : KoinComponent {
-    private val viewModel: HomeScreenViewModel by inject()
+    internal val viewModel: HomeScreenViewModel by inject()
     private val actions: ActionsViewModel by inject()
     private val dataSource: MainDataSource by inject()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -285,7 +285,10 @@ object NativePlayer : KoinComponent {
 
     fun toggleOwnMute() = act { data -> PlayerAction.ToggleMute(data.player.volumeMuted) }
 
-    fun setMemberVolume(playerId: String, level: Double) = viewModel.playerAction(playerId, PlayerAction.VolumeSet(level))
+    fun setMemberVolume(playerId: String, level: Double) = viewModel.playerAction(
+        playerId,
+        PlayerAction.VolumeSet(level),
+    )
 
     fun toggleMemberMute(playerId: String, muted: Boolean) =
         viewModel.playerAction(playerId, PlayerAction.ToggleMute(isMutedNow = muted))

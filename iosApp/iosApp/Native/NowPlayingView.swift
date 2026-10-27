@@ -11,6 +11,7 @@ struct NowPlayingView: View {
     @State private var panel: NowPlayingPanel = .artwork
     @State private var route: PresentedRoute?
     @State private var showsGroup = false
+    @ObservedObject private var tools = PlayerToolsModel.shared
     @State private var fold: FoldDivision?
     @Environment(\.dismiss) private var dismiss
 
@@ -56,6 +57,7 @@ struct NowPlayingView: View {
         // they do elsewhere.
         .sheet(item: $route) { PresentedRouteSheet(route: $0.route) }
         .sheet(isPresented: $showsGroup) { GroupSheet(model: model) }
+        .sheet(item: $tools.sheet) { PlayerToolSheetView(sheet: $0) }
         .itemActionPresentations()
     }
 
