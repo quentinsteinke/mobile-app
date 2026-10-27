@@ -153,17 +153,17 @@ struct AddToPlaylistSheet: View {
                     ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .navigationTitle("Add to Playlist")
+            .navigationTitle(L("action_add_to_playlist", "Add to Playlist"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button(L("common_cancel", "Cancel"), role: .cancel) { dismiss() }
                 }
             }
             .alert("New Playlist", isPresented: $asksName) {
                 TextField("Name", text: $newName)
-                Button("Cancel", role: .cancel) { newName = "" }
-                Button("Create") { create() }
+                Button(L("common_cancel", "Cancel"), role: .cancel) { newName = "" }
+                Button(L("common_create", "Create")) { create() }
                     .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
@@ -224,7 +224,7 @@ private struct ItemActionPresentations: ViewModifier {
                 AddToPlaylistSheet(item: item)
             }
             .confirmationDialog(
-                "Remove from Library?",
+                L("dialog_remove_from_library_title", "Remove from Library?"),
                 isPresented: Binding(get: { isActive && model.removalTarget != nil }, set: { if !$0 { model.removalTarget = nil } }),
                 titleVisibility: .visible,
                 presenting: model.removalTarget

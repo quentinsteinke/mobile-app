@@ -66,7 +66,7 @@ struct LibraryView: View {
                         .listSectionSeparator(.hidden, edges: .top)
                 }
                 .listStyle(.plain)
-                .navigationTitle("Library")
+                .navigationTitle(L("nav_library", "Library"))
                 .toolbar { editButton }
                 .nativeDestinations(bottomInset: bottomInset)
                 .safeAreaPadding(.bottom, bottomInset)
@@ -80,7 +80,7 @@ struct LibraryView: View {
                 List(routes, id: \.self, selection: $selected) { route in
                     CategoryLabel(route: route).tag(route)
                 }
-                .navigationTitle("Library")
+                .navigationTitle(L("nav_library", "Library"))
                 .toolbar { editButton }
                 .navigationSplitViewColumnWidth(sidebarWidth(geometry.size))
                 .toolbar(removing: .sidebarToggle)
@@ -96,7 +96,7 @@ struct LibraryView: View {
                         case .aiRadio:
                             AiRadioView(bottomInset: bottomInset)
                         default:
-                            ContentUnavailableView("Library", systemImage: "square.stack")
+                            ContentUnavailableView(L("nav_library", "Library"), systemImage: "square.stack")
                         }
                     }
                     .nativeDestinations(bottomInset: bottomInset)
@@ -195,8 +195,8 @@ struct LibraryListView: View {
             }
             .alert("New Playlist", isPresented: $asksPlaylistName) {
                 TextField("Name", text: $newPlaylistName)
-                Button("Cancel", role: .cancel) { newPlaylistName = "" }
-                Button("Create") {
+                Button(L("common_cancel", "Cancel"), role: .cancel) { newPlaylistName = "" }
+                Button(L("common_create", "Create")) {
                     let name = newPlaylistName.trimmingCharacters(in: .whitespaces)
                     newPlaylistName = ""
                     if !name.isEmpty { model.screen.createPlaylist(name: name) }
@@ -319,7 +319,7 @@ struct LibraryListView: View {
                         get: { model.state.groupsSeries },
                         set: { _ in model.screen.toggleSeriesGrouping() }
                     )) {
-                        Label("Group Series", systemImage: "books.vertical")
+                        Label(L("cd_toggle_series_grouping", "Group Series"), systemImage: "books.vertical")
                     }
                 }
             }
@@ -362,7 +362,7 @@ private struct CategoriesEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button(L("common_cancel", "Cancel"), role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {

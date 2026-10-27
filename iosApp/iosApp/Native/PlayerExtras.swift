@@ -30,13 +30,13 @@ struct PlayerOptionsMenu: View {
                 if let speed = extras.playbackSpeed?.doubleValue { speedMenu(speed) }
                 if let autoplay = extras.autoplay?.boolValue {
                     Toggle(isOn: Binding(get: { autoplay }, set: { _ in NativePlayer.shared.toggleAutoplay() })) {
-                        Label("Autoplay", systemImage: "infinity")
+                        Label(L("player_autoplay", "Autoplay"), systemImage: "infinity")
                     }
                     .disabled(!extras.canToggleAutoplay)
                 }
                 if let crossfade = extras.crossfade?.boolValue {
                     Toggle(isOn: Binding(get: { crossfade }, set: { _ in NativePlayer.shared.toggleCrossfade() })) {
-                        Label("Crossfade", systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
+                        Label(L("player_crossfade", "Crossfade"), systemImage: "arrow.left.and.right.righttriangle.left.righttriangle.right")
                     }
                     .disabled(!extras.canToggleCrossfade)
                 }
@@ -47,7 +47,7 @@ struct PlayerOptionsMenu: View {
             PlayerToolsMenuSection()
             Section {
                 if let album = extras.album {
-                    Button("Go to Album", systemImage: "square.stack") { route = PresentedRoute(.item(album)) }
+                    Button(L("action_go_to_album", "Go to Album"), systemImage: "square.stack") { route = PresentedRoute(.item(album)) }
                 }
                 ForEach(extras.artists, id: \.key) { artist in
                     Button(extras.artists.count > 1 ? "Go to \(artist.title)" : "Go to Artist", systemImage: "music.microphone") {
@@ -59,7 +59,7 @@ struct PlayerOptionsMenu: View {
                 MediaContextMenu(item: item, showsPlayback: false)
                 if extras.canStartRadio {
                     Section {
-                        Button("Start Radio", systemImage: "dot.radiowaves.left.and.right") {
+                        Button(L("action_start_radio", "Start Radio"), systemImage: "dot.radiowaves.left.and.right") {
                             NativePlayer.shared.startRadio()
                         }
                     }
@@ -72,7 +72,7 @@ struct PlayerOptionsMenu: View {
                 .background(Color.white.opacity(0.12), in: Capsule())
         }
         .menuOrder(.fixed)
-        .accessibilityLabel("More")
+        .accessibilityLabel(L("cd_more", "More"))
     }
 
     private var sleepTimerMenu: some View {
@@ -93,7 +93,7 @@ struct PlayerOptionsMenu: View {
             if let remaining {
                 Label("Sleep Timer · \(formatPlaybackTime(remaining))", systemImage: "moon.fill")
             } else {
-                Label("Sleep Timer", systemImage: "moon")
+                Label(L("player_sleep_timer", "Sleep Timer"), systemImage: "moon")
             }
         }
     }
@@ -142,7 +142,7 @@ struct PresentedRouteSheet: View {
                 .nativeDestinations(bottomInset: 0)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { dismiss() }
+                        Button(L("common_done", "Done")) { dismiss() }
                     }
                 }
         }
@@ -221,7 +221,7 @@ struct GroupSheet: View {
                                     Text(nowPlaying.playerName).font(.headline)
                                     Spacer()
                                     if group.canLeave {
-                                        Button("Leave Group", role: .destructive) {
+                                        Button(L("cd_leave_group", "Leave Group"), role: .destructive) {
                                             NativePlayer.shared.leaveGroup()
                                             dismiss()
                                         }
@@ -251,7 +251,7 @@ struct GroupSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L("common_done", "Done")) { dismiss() }
                 }
             }
         }

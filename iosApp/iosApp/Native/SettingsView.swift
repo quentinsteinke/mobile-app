@@ -67,11 +67,11 @@ struct SettingsView: View {
             }
             .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
             .readsFold(into: $fold)
-            .navigationTitle("Settings")
+            .navigationTitle(L("nav_settings", "Settings"))
             .toolbar {
                 if isTopLevel && state.phase == .signedIn {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { KmpHelper.shared.settingsGoHome() }
+                        Button(L("common_done", "Done")) { KmpHelper.shared.settingsGoHome() }
                     }
                 }
             }
@@ -136,7 +136,7 @@ struct SettingsView: View {
             }
             Section {
                 if state.usesWebRtc {
-                    TextField("Remote ID", text: Binding(
+                    TextField(L("settings_remote_id", "Remote ID"), text: Binding(
                         get: { state.webrtcRemoteId },
                         set: { model.screen.setWebrtcRemoteId(remoteId: $0) }
                     ))
@@ -157,7 +157,7 @@ struct SettingsView: View {
                             .submitLabel(.next)
                             .onSubmit { focusedField = .port }
                     }
-                    LabeledContent("Port") {
+                    LabeledContent(L("settings_port", "Port")) {
                         TextField("8095", text: $port)
                             .multilineTextAlignment(.trailing)
                             .keyboardType(.numberPad)
@@ -176,7 +176,7 @@ struct SettingsView: View {
                 }
                 Button(action: connect) {
                     HStack {
-                        Text("Connect")
+                        Text(L("settings_connect", "Connect"))
                         if state.connectInFlight {
                             Spacer()
                             ProgressView()
@@ -185,7 +185,7 @@ struct SettingsView: View {
                 }
                 .disabled(state.connectInFlight || (!state.usesWebRtc && port.isEmpty))
             } header: {
-                Text("Server")
+                Text(L("settings_server", "Server"))
             } footer: {
                 if let error = state.errorMessage {
                     Text(error).foregroundStyle(.red)
@@ -218,16 +218,16 @@ struct SettingsView: View {
                 }
             }
         case .connecting:
-            Section("Server") {
+            Section(L("settings_server", "Server")) {
                 HStack(spacing: 12) {
                     ProgressView()
                     Text(state.connectingTo.map { "Connecting to \($0)…" } ?? "Connecting…")
                         .foregroundStyle(.secondary)
                 }
-                Button("Cancel", role: .cancel) { model.screen.disconnect() }
+                Button(L("common_cancel", "Cancel"), role: .cancel) { model.screen.disconnect() }
             }
         case .awaitingAuth, .signedIn:
-            Section("Server") {
+            Section(L("settings_server", "Server")) {
                 if let name = state.serverName {
                     LabeledContent("Name", value: name)
                 }
@@ -237,7 +237,7 @@ struct SettingsView: View {
                 if let version = state.serverVersion {
                     LabeledContent("Version", value: version)
                 }
-                Button("Disconnect", role: .destructive) { model.screen.disconnect() }
+                Button(L("settings_disconnect", "Disconnect"), role: .destructive) { model.screen.disconnect() }
             }
         default:
             EmptyView()
@@ -302,7 +302,7 @@ struct SettingsView: View {
                     Button("Try Again") { model.screen.retryProviders() }
                 }
                 if let builtin = state.authProviders.first(where: { $0.isBuiltin }) {
-                    TextField("Username", text: $username)
+                    TextField(L("auth_username", "Username"), text: $username)
                         .textContentType(.username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -381,7 +381,7 @@ struct SettingsView: View {
                 model.screen.shareLogs(chooserTitle: "Share Logs")
             } label: {
                 HStack {
-                    Text("Share Logs")
+                    Text(L("settings_share_logs", "Share Logs"))
                     if state.isPreparingShare {
                         Spacer()
                         ProgressView()
@@ -433,7 +433,7 @@ private struct LocalPlayerSection: View {
                         Text(name).tag(name)
                     }
                 }
-                Toggle("24-bit Audio", isOn: Binding(
+                Toggle(L("settings_hi_res_audio", "24-bit Audio"), isOn: Binding(
                     get: { player.hiRes },
                     set: { model.screen.setLocalPlayerHiRes(enabled: $0) }
                 ))
@@ -464,7 +464,7 @@ private struct LocalPlayerSection: View {
             set: { if !$0 { model.screen.dismissLocalPlayer() } }
         )) {
             Button("Apply", role: .destructive) { model.screen.confirmLocalPlayer() }
-            Button("Cancel", role: .cancel) { model.screen.dismissLocalPlayer() }
+            Button(L("common_cancel", "Cancel"), role: .cancel) { model.screen.dismissLocalPlayer() }
         } message: {
             Text("The local player restarts with the new settings, which stops what it plays now.")
         }

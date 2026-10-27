@@ -365,6 +365,8 @@ private final class TabShellModel: ObservableObject {
     private var requests: Task<Void, Never>?
 
     init() {
+        // Starts loading the app strings for the native screens (`L`).
+        _ = NativeText.shared
         requests = Task {
             for await request in IosTabShell.shared.requests {
                 switch request.kind {

@@ -11,13 +11,13 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Home")
+                .navigationTitle(L("nav_home", "Home"))
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Refresh", systemImage: "arrow.clockwise") { model.screen.refresh() }
+                        Button(L("refresh", "Refresh"), systemImage: "arrow.clockwise") { model.screen.refresh() }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Edit Rows", systemImage: "slider.horizontal.3") { editsRows = true }
+                        Button(L("home_edit_rows", "Edit Rows"), systemImage: "slider.horizontal.3") { editsRows = true }
                             .disabled(model.state.choices.isEmpty)
                     }
                 }
@@ -128,7 +128,7 @@ private struct HomeRowsEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button(L("common_cancel", "Cancel"), role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {

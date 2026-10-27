@@ -95,7 +95,7 @@ struct ItemDetailView: View {
         let artists = model.state.genreArtists
         if !artists.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Artists").font(.title3.weight(.bold))
+                Text(L("media_type_artists", "Artists")).font(.title3.weight(.bold))
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 14) {
                         ForEach(artists, id: \.key) { artist in
@@ -133,7 +133,7 @@ struct ItemDetailView: View {
                     .mediaRowInsets()
                 }
             } header: {
-                Text("Chapters").font(.title3.weight(.bold)).foregroundStyle(.primary).textCase(nil)
+                Text(L("media_type_chapters", "Chapters")).font(.title3.weight(.bold)).foregroundStyle(.primary).textCase(nil)
             }
         }
         let items = model.state.items
@@ -178,13 +178,13 @@ struct ItemDetailView: View {
             if let header = model.state.header {
                 MediaContextMenu(item: header)
                 if model.state.isPlaylist {
-                    Button("Refresh", systemImage: "arrow.clockwise") { model.screen.refreshPlaylist() }
+                    Button(L("refresh", "Refresh"), systemImage: "arrow.clockwise") { model.screen.refreshPlaylist() }
                 }
             }
         } label: {
             Image(systemName: "ellipsis")
         }
-        .accessibilityLabel("More")
+        .accessibilityLabel(L("cd_more", "More"))
     }
 }
 
@@ -209,7 +209,7 @@ private struct DetailHeader: View {
                         Image(systemName: "heart.fill")
                             .font(.subheadline)
                             .foregroundStyle(.pink)
-                            .accessibilityLabel("Favorite")
+                            .accessibilityLabel(L("action_favorite", "Favorite"))
                     }
                 }
                 if let subtitle = header.subtitle, !subtitle.isEmpty {
@@ -228,7 +228,7 @@ private struct DetailHeader: View {
                 Button {
                     model.screen.play(shuffle: false)
                 } label: {
-                    Label("Play", systemImage: "play.fill")
+                    Label(L("action_play", "Play"), systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .disabled(!header.isPlayable)
@@ -236,7 +236,7 @@ private struct DetailHeader: View {
                     Button {
                         model.screen.play(shuffle: true)
                     } label: {
-                        Label("Shuffle", systemImage: "shuffle")
+                        Label(L("media_action_shuffle", "Shuffle"), systemImage: "shuffle")
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -308,11 +308,11 @@ private struct ArtistPage: View {
                         .multilineTextAlignment(.center)
                     HStack(spacing: 12) {
                         Button { model.screen.play(shuffle: false) } label: {
-                            Label("Play", systemImage: "play.fill").frame(maxWidth: .infinity)
+                            Label(L("action_play", "Play"), systemImage: "play.fill").frame(maxWidth: .infinity)
                         }
                         if model.state.canShuffle {
                             Button { model.screen.play(shuffle: true) } label: {
-                                Label("Shuffle", systemImage: "shuffle").frame(maxWidth: .infinity)
+                                Label(L("media_action_shuffle", "Shuffle"), systemImage: "shuffle").frame(maxWidth: .infinity)
                             }
                         }
                     }

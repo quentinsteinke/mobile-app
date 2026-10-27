@@ -43,10 +43,10 @@ struct PlayerToolsMenuSection: View {
                 Button("Equalizer (DSP)", systemImage: "slider.vertical.3") { model.sheet = .dsp }
             }
             if tools.canAnnounceText || tools.canAnnounceVoice {
-                Button("Announce", systemImage: "megaphone") { model.sheet = .announcement }
+                Button(L("announcement_send", "Announce"), systemImage: "megaphone") { model.sheet = .announcement }
             }
             if tools.overlay != nil {
-                Button("Ambient Sound", systemImage: "cloud.rain") { model.sheet = .ambientSound }
+                Button(L("ambient_sound_title", "Ambient Sound"), systemImage: "cloud.rain") { model.sheet = .ambientSound }
             }
             if let hosts = tools.djHosts {
                 Menu {
@@ -54,7 +54,7 @@ struct PlayerToolsMenuSection: View {
                         get: { tools.djHostId ?? "" },
                         set: { NativePlayerTools.shared.selectDj(hostId: $0.isEmpty ? nil : $0) }
                     )) {
-                        Text("Off").tag("")
+                        Text(L("ambient_sound_off", "Off")).tag("")
                         ForEach(hosts, id: \.id) { host in Text(host.name).tag(host.id) }
                     }
                 } label: {
@@ -91,7 +91,7 @@ private struct ToolSheet<Content: View>: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                        Button(L("common_done", "Done")) { dismiss() }
                     }
                 }
         }
@@ -117,14 +117,14 @@ private struct StreamDetailsSheet: View {
                         }
                     }
                     if !stream.outputs.isEmpty {
-                        Section("Output") {
+                        Section(L("quality_dialog_output", "Output")) {
                             ForEach(Array(stream.outputs.enumerated()), id: \.offset) { _, output in stage(output) }
                         }
                     }
                 }
                 .sheet(item: $route) { PresentedRouteSheet(route: $0.route) }
             } else {
-                ContentUnavailableView("Nothing Playing", systemImage: "waveform")
+                ContentUnavailableView(L("players_nothing", "Nothing Playing"), systemImage: "waveform")
             }
         }
     }
@@ -158,7 +158,7 @@ private struct DspSheet: View {
                 List {
                     Toggle("DSP", isOn: Binding(get: { dsp.enabled }, set: { _ in NativePlayerTools.shared.toggleDsp() }))
                     if !dsp.presets.isEmpty {
-                        Section("Presets") {
+                        Section(L("dsp_presets", "Presets")) {
                             ForEach(Array(dsp.presets.enumerated()), id: \.offset) { index, name in
                                 Button {
                                     NativePlayerTools.shared.applyDspPreset(index: Int32(index))
@@ -197,8 +197,8 @@ private struct AnnouncementSheet: View {
             Form {
                 if model.tools.canAnnounceText && model.tools.canAnnounceVoice {
                     Picker("Mode", selection: $speaks) {
-                        Text("Type").tag(false)
-                        Text("Speak").tag(true)
+                        Text(L("announcement_tab_type", "Type")).tag(false)
+                        Text(L("announcement_tab_speak", "Speak")).tag(true)
                     }
                     .pickerStyle(.segmented)
                     .listRowBackground(Color.clear)
@@ -206,13 +206,13 @@ private struct AnnouncementSheet: View {
                 }
                 if !showsSpeak {
                     Section {
-                        TextField("Message", text: $message, axis: .vertical)
+                        TextField(L("announcement_message", "Message"), text: $message, axis: .vertical)
                             .lineLimit(2...5)
                     }
                 }
                 Section {
                     Toggle("Chime First", isOn: $chime)
-                    Toggle("Custom Volume", isOn: $customVolume)
+                    Toggle(L("announcement_custom_volume", "Custom Volume"), isOn: $customVolume)
                     if customVolume {
                         HStack {
                             Slider(value: $volume, in: 0...100)

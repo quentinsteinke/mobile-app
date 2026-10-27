@@ -92,34 +92,40 @@ struct PlayPauseButton: View {
     }
 }
 
-/// The user-facing text of the native UI. English for now; it moves to a localized catalog
-/// when the native screens replace the Compose ones.
+/// The text of [key] in the app's strings (`composeResources/values/strings.xml`), in the app
+/// language, or [english] before the strings load or when the key has no translation.
+func L(_ key: String, _ english: String) -> String {
+    NativeText.shared.text(key: key) ?? english
+}
+
+/// The user-facing text of the native player. Entries with a key come from the app strings, so
+/// they are translated; the others are English until they get a key.
 enum NativeStrings {
     static let notPlaying = "Not Playing"
     static let openNowPlaying = "Opens Now Playing"
-    static let play = "Play"
-    static let pause = "Pause"
-    static let stop = "Stop"
+    static var play: String { L("action_play", "Play") }
+    static var pause: String { L("action_pause", "Pause") }
+    static var stop: String { L("action_stop", "Stop") }
     static let powerOn = "Turn on"
-    static let next = "Next"
-    static let previous = "Previous"
+    static var next: String { L("media_action_next", "Next") }
+    static var previous: String { L("media_action_previous", "Previous") }
     static let skipBack = "Back 10 seconds"
     static let skipForward = "Forward 30 seconds"
-    static let shuffle = "Shuffle"
-    static let repeatMode = "Repeat"
-    static let mute = "Mute"
-    static let unmute = "Unmute"
+    static var shuffle: String { L("media_action_shuffle", "Shuffle") }
+    static var repeatMode: String { L("media_action_repeat", "Repeat") }
+    static var mute: String { L("cd_mute", "Mute") }
+    static var unmute: String { L("cd_unmute", "Unmute") }
     static let volume = "Volume"
-    static let favorite = "Favorite"
-    static let unfavorite = "Remove from favorites"
+    static var favorite: String { L("action_favorite", "Favorite") }
+    static var unfavorite: String { L("action_unfavorite", "Remove from favorites") }
     static let upNext = "Up Next"
-    static let queue = "Queue"
-    static let clearQueue = "Clear Queue"
-    static let remove = "Remove"
-    static let queueEmpty = "Queue Is Empty"
+    static var queue: String { L("queue_label", "Queue") }
+    static var clearQueue: String { L("queue_clear", "Clear Queue") }
+    static var remove: String { L("action_remove", "Remove") }
+    static var queueEmpty: String { L("queue_empty", "Queue Is Empty") }
     static let queueEmptyHint = "Play something from your library."
     static let noPlayer = "No Player"
     static let noPlayerHint = "Music Assistant has no player to play on."
-    static let players = "Players"
-    static let close = "Close"
+    static var players: String { L("players_title", "Players") }
+    static var close: String { L("cd_close", "Close") }
 }

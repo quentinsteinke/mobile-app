@@ -122,14 +122,14 @@ extension MediaType {
 
     var libraryTitle: String {
         switch self {
-        case .artist: return "Artists"
-        case .album: return "Albums"
-        case .track: return "Songs"
-        case .playlist: return "Playlists"
-        case .audiobook: return "Audiobooks"
-        case .podcast: return "Podcasts"
-        case .radio: return "Radio"
-        case .genre: return "Genres"
+        case .artist: return L("media_type_artists", "Artists")
+        case .album: return L("media_type_albums", "Albums")
+        case .track: return L("media_type_tracks", "Songs")
+        case .playlist: return L("media_type_playlists", "Playlists")
+        case .audiobook: return L("media_type_audiobooks", "Audiobooks")
+        case .podcast: return L("media_type_podcasts", "Podcasts")
+        case .radio: return L("media_type_radio", "Radio")
+        case .genre: return L("media_type_genres", "Genres")
         default: return "Library"
         }
     }

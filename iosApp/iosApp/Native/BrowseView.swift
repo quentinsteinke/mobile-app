@@ -131,7 +131,7 @@ struct AiRadioView: View {
 
     var body: some View {
         content
-            .navigationTitle("AI Radio")
+            .navigationTitle(L("ai_radio_title", "AI Radio"))
             .safeAreaPadding(.bottom, bottomInset)
     }
 

@@ -11,7 +11,7 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Search")
+                .navigationTitle(L("nav_search", "Search"))
                 .searchable(
                     text: $query,
                     placement: .navigationBarDrawer(displayMode: .always),
